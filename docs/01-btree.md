@@ -30,6 +30,33 @@ No es todavía un B-Tree completo de producción. El split recursivo, la
 eliminación, las páginas persistentes y la concurrencia quedan fuera de este
 paso.
 
+## Diagrama Del Split
+
+Fuente Mermaid: [`../diagrams/01-btree.mmd`](../diagrams/01-btree.mmd).
+
+```mermaid
+flowchart TD
+    subgraph before["Antes del split"]
+        beforeRoot["Raíz hoja\nkeys: 10 | 20 | 30\nheight = 1"]
+    end
+
+    insert["insert(Key(40), RecordPointer { page_id: 1, slot_id: 40 })"]
+
+    subgraph after["Después del split educativo"]
+        afterRoot["Raíz interna\nseparator: 30\nheight = 2"]
+        leftLeaf["Hoja izquierda\nkeys: 10 | 20"]
+        rightLeaf["Hoja derecha\nkeys: 30 | 40"]
+    end
+
+    beforeRoot --> insert
+    insert --> afterRoot
+    afterRoot -->|"key < 30"| leftLeaf
+    afterRoot -->|"key >= 30"| rightLeaf
+
+    leftLeaf -. "RecordPointer por clave" .-> leftPointers["10 -> page 1 slot 10\n20 -> page 1 slot 20"]
+    rightLeaf -. "RecordPointer por clave" .-> rightPointers["30 -> page 1 slot 30\n40 -> page 1 slot 40"]
+```
+
 ## Invariantes De Orden
 
 Toda hoja conserva sus claves en orden estrictamente ascendente.

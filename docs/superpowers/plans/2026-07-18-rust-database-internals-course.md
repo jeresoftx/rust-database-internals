@@ -123,7 +123,7 @@ Aplicación práctica:
 - [x] Implementar split educativo.
 - [x] Documentar invariantes: orden, fanout, altura balanceada, claves
   separadoras y punteros.
-- [ ] Crear diagrama Mermaid de nodo raíz, hojas y split.
+- [x] Crear diagrama Mermaid de nodo raíz, hojas y split.
 - [ ] Crear ejemplos progresivos y caso real de índice por primary key.
 - [ ] Crear ejercicios y soluciones.
 - [ ] Crear benchmark de búsqueda e inserción.
