@@ -119,7 +119,7 @@ Aplicación práctica:
 - [x] Implementar búsqueda.
 - [x] Escribir test rojo para inserción simple.
 - [x] Implementar inserción sin split.
-- [ ] Escribir test rojo para split de nodo.
+- [x] Escribir test rojo para split de nodo.
 - [ ] Implementar split educativo.
 - [ ] Documentar invariantes: orden, fanout, altura balanceada, claves
   separadoras y punteros.
