@@ -1,14 +1,14 @@
 //! Modelo educativo inicial de un B-Tree.
 //!
 //! Este módulo comienza con la frontera mínima del capítulo: crear un árbol
-//! vacío, exponer sus métricas básicas y buscar una clave. Los nodos reales,
-//! inserciones y splits se agregan en los siguientes pasos del plan.
+//! vacío, exponer sus métricas básicas, buscar una clave e ilustrar el primer
+//! split de raíz. Los splits recursivos quedan para capítulos posteriores.
 
 /// Índice balanceado por altura para buscar punteros de registro por clave.
 #[derive(Debug, Clone)]
 pub struct BTree {
     max_keys_per_node: usize,
-    entries: Vec<(Key, RecordPointer)>,
+    root: Root,
 }
 
 impl BTree {
@@ -24,18 +24,21 @@ impl BTree {
 
         Ok(Self {
             max_keys_per_node,
-            entries: Vec::new(),
+            root: Root::Leaf(Vec::new()),
         })
     }
 
     /// Devuelve `true` cuando el árbol no contiene pares clave-puntero.
     pub fn is_empty(&self) -> bool {
-        self.entries.is_empty()
+        self.len() == 0
     }
 
     /// Devuelve el número de pares clave-puntero almacenados.
     pub fn len(&self) -> usize {
-        self.entries.len()
+        match &self.root {
+            Root::Leaf(entries) => entries.len(),
+            Root::Internal { left, right, .. } => left.len() + right.len(),
+        }
     }
 
     /// Devuelve la altura del árbol.
@@ -43,37 +46,60 @@ impl BTree {
     /// Un árbol vacío tiene altura `0`. Cuando exista una raíz, la altura será
     /// al menos `1`.
     pub fn height(&self) -> usize {
-        if self.is_empty() {
-            0
-        } else {
-            1
+        match &self.root {
+            Root::Leaf(entries) if entries.is_empty() => 0,
+            Root::Leaf(_) => 1,
+            Root::Internal { .. } => 2,
         }
     }
 
     /// Busca una clave y devuelve el puntero asociado cuando existe.
     pub fn search(&self, key: Key) -> Result<Option<RecordPointer>, BTreeError> {
-        match self.find_key(key) {
-            Ok(position) => Ok(Some(self.entries[position].1)),
+        let entries = self.entries_for_search(key);
+
+        match find_key(entries, key) {
+            Ok(position) => Ok(Some(entries[position].pointer)),
             Err(_) => Ok(None),
         }
     }
 
     /// Inserta una clave con su puntero de registro.
     ///
-    /// Esta primera versión solo cubre una raíz-hoja con capacidad disponible.
-    /// Cuando el nodo está lleno, el split se implementa en un paso posterior.
+    /// Esta versión cubre una raíz-hoja con capacidad disponible y el primer
+    /// split de raíz. Si una hoja posterior se llena, el split recursivo queda
+    /// como trabajo futuro explícito.
     pub fn insert(&mut self, key: Key, pointer: RecordPointer) -> Result<(), BTreeError> {
-        match self.find_key(key) {
-            Ok(_) => Err(BTreeError::DuplicateKey(key)),
-            Err(position) => {
-                if self.entries.len() >= self.max_keys_per_node {
-                    return Err(BTreeError::NodeFullRequiresSplit {
-                        max_keys_per_node: self.max_keys_per_node,
-                    });
-                }
+        match &mut self.root {
+            Root::Leaf(entries) => {
+                insert_into_root_leaf(entries, self.max_keys_per_node, key, pointer).map(|split| {
+                    if let Some((left, separator, right)) = split {
+                        self.root = Root::Internal {
+                            separator,
+                            left,
+                            right,
+                        };
+                    }
+                })
+            }
+            Root::Internal {
+                separator,
+                left,
+                right,
+            } => {
+                let target = if key < *separator { left } else { right };
+                match find_key(target, key) {
+                    Ok(_) => Err(BTreeError::DuplicateKey(key)),
+                    Err(position) => {
+                        if target.len() >= self.max_keys_per_node {
+                            return Err(BTreeError::NodeFullRequiresSplit {
+                                max_keys_per_node: self.max_keys_per_node,
+                            });
+                        }
 
-                self.entries.insert(position, (key, pointer));
-                Ok(())
+                        target.insert(position, Entry { key, pointer });
+                        Ok(())
+                    }
+                }
             }
         }
     }
@@ -83,10 +109,92 @@ impl BTree {
         self.max_keys_per_node
     }
 
-    fn find_key(&self, key: Key) -> Result<usize, usize> {
-        self.entries
-            .binary_search_by_key(&key, |(entry_key, _)| *entry_key)
+    /// Devuelve la clave separadora de la raíz cuando ya hubo split.
+    pub fn root_separator(&self) -> Option<Key> {
+        match &self.root {
+            Root::Leaf(_) => None,
+            Root::Internal { separator, .. } => Some(*separator),
+        }
     }
+
+    /// Devuelve las claves de cada hoja de izquierda a derecha.
+    pub fn leaf_keys(&self) -> Vec<Vec<Key>> {
+        match &self.root {
+            Root::Leaf(entries) => vec![entries.iter().map(|entry| entry.key).collect()],
+            Root::Internal { left, right, .. } => vec![
+                left.iter().map(|entry| entry.key).collect(),
+                right.iter().map(|entry| entry.key).collect(),
+            ],
+        }
+    }
+
+    fn entries_for_search(&self, key: Key) -> &[Entry] {
+        match &self.root {
+            Root::Leaf(entries) => entries,
+            Root::Internal {
+                separator,
+                left,
+                right,
+            } => {
+                if key < *separator {
+                    left
+                } else {
+                    right
+                }
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+enum Root {
+    Leaf(Vec<Entry>),
+    Internal {
+        separator: Key,
+        left: Vec<Entry>,
+        right: Vec<Entry>,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Entry {
+    key: Key,
+    pointer: RecordPointer,
+}
+
+type RootSplit = Option<(Vec<Entry>, Key, Vec<Entry>)>;
+
+fn insert_into_root_leaf(
+    entries: &mut Vec<Entry>,
+    max_keys_per_node: usize,
+    key: Key,
+    pointer: RecordPointer,
+) -> Result<RootSplit, BTreeError> {
+    match find_key(entries, key) {
+        Ok(_) => Err(BTreeError::DuplicateKey(key)),
+        Err(position) => {
+            if entries.len() < max_keys_per_node {
+                entries.insert(position, Entry { key, pointer });
+                return Ok(None);
+            }
+
+            let mut split_entries = entries.clone();
+            split_entries.insert(position, Entry { key, pointer });
+            Ok(Some(split_root_entries(split_entries)))
+        }
+    }
+}
+
+fn split_root_entries(mut entries: Vec<Entry>) -> (Vec<Entry>, Key, Vec<Entry>) {
+    let split_at = entries.len() / 2;
+    let right = entries.split_off(split_at);
+    let separator = right[0].key;
+
+    (entries, separator, right)
+}
+
+fn find_key(entries: &[Entry], key: Key) -> Result<usize, usize> {
+    entries.binary_search_by_key(&key, |entry| entry.key)
 }
 
 /// Identificador lógico de nodo.

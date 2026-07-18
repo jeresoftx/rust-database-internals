@@ -92,7 +92,7 @@ fn duplicate_insert_returns_clear_error() {
 }
 
 #[test]
-fn insert_without_split_reports_full_root() {
+fn recursive_split_is_reported_after_first_root_split() {
     let mut tree = match BTree::new(3) {
         Ok(tree) => tree,
         Err(_) => panic!("max_keys_per_node=3 debe crear un B-Tree válido"),
@@ -105,15 +105,17 @@ fn insert_without_split_reports_full_root() {
     assert_eq!(tree.insert(Key::new(10), pointer), Ok(()));
     assert_eq!(tree.insert(Key::new(20), pointer), Ok(()));
     assert_eq!(tree.insert(Key::new(30), pointer), Ok(()));
+    assert_eq!(tree.insert(Key::new(40), pointer), Ok(()));
+    assert_eq!(tree.insert(Key::new(50), pointer), Ok(()));
 
     assert_eq!(
-        tree.insert(Key::new(40), pointer),
+        tree.insert(Key::new(60), pointer),
         Err(BTreeError::NodeFullRequiresSplit {
             max_keys_per_node: 3
         })
     );
-    assert_eq!(tree.len(), 3);
-    assert_eq!(tree.search(Key::new(40)), Ok(None));
+    assert_eq!(tree.len(), 5);
+    assert_eq!(tree.search(Key::new(60)), Ok(None));
 }
 
 #[test]
@@ -146,6 +148,14 @@ fn inserting_past_root_capacity_splits_root_and_preserves_search() {
 
     assert_eq!(tree.len(), 4);
     assert_eq!(tree.height(), 2);
+    assert_eq!(tree.root_separator(), Some(Key::new(30)));
+    assert_eq!(
+        tree.leaf_keys(),
+        vec![
+            vec![Key::new(10), Key::new(20)],
+            vec![Key::new(30), Key::new(40)]
+        ]
+    );
     assert_eq!(tree.search(Key::new(10)), Ok(Some(ten)));
     assert_eq!(tree.search(Key::new(20)), Ok(Some(twenty)));
     assert_eq!(tree.search(Key::new(30)), Ok(Some(thirty)));
