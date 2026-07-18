@@ -49,6 +49,36 @@ Toda nueva funcionalidad incluye:
 - Tests.
 - Benchmarks cuando apliquen; si no aplican, se declara.
 
+## Flujo Issue → Commit → PR
+
+Antes de tocar código de curso, el plan completo debe existir como milestones e
+issues en GitHub. Ese tablero es el checklist operativo del repositorio.
+
+Cada paso del plan se trabaja con trazabilidad mínima:
+
+1. Crear o reutilizar un issue específico para el paso.
+2. Crear una rama corta y descriptiva desde `main`.
+3. Hacer exactamente un commit principal para ese paso.
+4. Abrir un pull request hacia `main`.
+5. Entregar un resumen breve para revisión humana.
+6. Esperar aprobación explícita antes de fusionar el PR.
+
+Reglas operativas:
+
+- Un paso del plan equivale a un issue, un commit y un PR.
+- Cada issue debe estar asignado a `jeresoftx`.
+- Cada issue debe pertenecer al milestone del capítulo o fase correspondiente.
+- No se empuja trabajo directo a `main`, salvo creación inicial del repositorio
+  o correcciones administrativas explícitamente aprobadas.
+- El PR debe mencionar el issue que resuelve.
+- Si un paso resulta demasiado grande para un solo commit, primero se divide en
+  pasos más pequeños y se crean issues separados.
+- No se cierra ni se fusiona un PR sin revisión humana.
+- Después de fusionar, se actualiza el checklist y se continúa con el siguiente
+  issue.
+- Si se descubre trabajo no planeado, primero se crea o ajusta el issue; luego
+  se implementa.
+
 ## Frontera Del Curso
 
 Este curso no depende de PostgreSQL, MySQL, MongoDB ni motores reales. Esos
