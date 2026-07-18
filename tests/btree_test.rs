@@ -1,4 +1,4 @@
-use rust_database_internals::btree::{BTree, Key, RecordPointer};
+use rust_database_internals::btree::{BTree, BTreeError, Key, RecordPointer};
 
 #[test]
 fn search_in_empty_tree_returns_none() {
@@ -38,4 +38,80 @@ fn simple_insert_can_be_found_by_search() {
     assert_eq!(tree.height(), 1);
     assert_eq!(tree.search(Key::new(42)), Ok(Some(pointer)));
     assert_eq!(tree.search(Key::new(9)), Ok(None));
+}
+
+#[test]
+fn inserts_without_split_keep_keys_searchable() {
+    let mut tree = match BTree::new(3) {
+        Ok(tree) => tree,
+        Err(_) => panic!("max_keys_per_node=3 debe crear un B-Tree válido"),
+    };
+    let first = RecordPointer {
+        page_id: 1,
+        slot_id: 1,
+    };
+    let second = RecordPointer {
+        page_id: 1,
+        slot_id: 2,
+    };
+    let third = RecordPointer {
+        page_id: 1,
+        slot_id: 3,
+    };
+
+    assert_eq!(tree.insert(Key::new(20), second), Ok(()));
+    assert_eq!(tree.insert(Key::new(10), first), Ok(()));
+    assert_eq!(tree.insert(Key::new(30), third), Ok(()));
+
+    assert_eq!(tree.len(), 3);
+    assert_eq!(tree.height(), 1);
+    assert_eq!(tree.search(Key::new(10)), Ok(Some(first)));
+    assert_eq!(tree.search(Key::new(20)), Ok(Some(second)));
+    assert_eq!(tree.search(Key::new(30)), Ok(Some(third)));
+}
+
+#[test]
+fn duplicate_insert_returns_clear_error() {
+    let mut tree = match BTree::new(3) {
+        Ok(tree) => tree,
+        Err(_) => panic!("max_keys_per_node=3 debe crear un B-Tree válido"),
+    };
+    let pointer = RecordPointer {
+        page_id: 7,
+        slot_id: 2,
+    };
+
+    assert_eq!(tree.insert(Key::new(42), pointer), Ok(()));
+
+    assert_eq!(
+        tree.insert(Key::new(42), pointer),
+        Err(BTreeError::DuplicateKey(Key::new(42)))
+    );
+    assert_eq!(tree.len(), 1);
+    assert_eq!(tree.search(Key::new(42)), Ok(Some(pointer)));
+}
+
+#[test]
+fn insert_without_split_reports_full_root() {
+    let mut tree = match BTree::new(3) {
+        Ok(tree) => tree,
+        Err(_) => panic!("max_keys_per_node=3 debe crear un B-Tree válido"),
+    };
+    let pointer = RecordPointer {
+        page_id: 1,
+        slot_id: 1,
+    };
+
+    assert_eq!(tree.insert(Key::new(10), pointer), Ok(()));
+    assert_eq!(tree.insert(Key::new(20), pointer), Ok(()));
+    assert_eq!(tree.insert(Key::new(30), pointer), Ok(()));
+
+    assert_eq!(
+        tree.insert(Key::new(40), pointer),
+        Err(BTreeError::NodeFullRequiresSplit {
+            max_keys_per_node: 3
+        })
+    );
+    assert_eq!(tree.len(), 3);
+    assert_eq!(tree.search(Key::new(40)), Ok(None));
 }

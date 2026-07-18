@@ -8,7 +8,7 @@
 #[derive(Debug, Clone)]
 pub struct BTree {
     max_keys_per_node: usize,
-    len: usize,
+    entries: Vec<(Key, RecordPointer)>,
 }
 
 impl BTree {
@@ -24,18 +24,18 @@ impl BTree {
 
         Ok(Self {
             max_keys_per_node,
-            len: 0,
+            entries: Vec::new(),
         })
     }
 
     /// Devuelve `true` cuando el árbol no contiene pares clave-puntero.
     pub fn is_empty(&self) -> bool {
-        self.len == 0
+        self.entries.is_empty()
     }
 
     /// Devuelve el número de pares clave-puntero almacenados.
     pub fn len(&self) -> usize {
-        self.len
+        self.entries.len()
     }
 
     /// Devuelve la altura del árbol.
@@ -51,13 +51,41 @@ impl BTree {
     }
 
     /// Busca una clave y devuelve el puntero asociado cuando existe.
-    pub fn search(&self, _key: Key) -> Result<Option<RecordPointer>, BTreeError> {
-        Ok(None)
+    pub fn search(&self, key: Key) -> Result<Option<RecordPointer>, BTreeError> {
+        match self.find_key(key) {
+            Ok(position) => Ok(Some(self.entries[position].1)),
+            Err(_) => Ok(None),
+        }
+    }
+
+    /// Inserta una clave con su puntero de registro.
+    ///
+    /// Esta primera versión solo cubre una raíz-hoja con capacidad disponible.
+    /// Cuando el nodo está lleno, el split se implementa en un paso posterior.
+    pub fn insert(&mut self, key: Key, pointer: RecordPointer) -> Result<(), BTreeError> {
+        match self.find_key(key) {
+            Ok(_) => Err(BTreeError::DuplicateKey(key)),
+            Err(position) => {
+                if self.entries.len() >= self.max_keys_per_node {
+                    return Err(BTreeError::NodeFullRequiresSplit {
+                        max_keys_per_node: self.max_keys_per_node,
+                    });
+                }
+
+                self.entries.insert(position, (key, pointer));
+                Ok(())
+            }
+        }
     }
 
     /// Capacidad máxima de claves por nodo.
     pub fn max_keys_per_node(&self) -> usize {
         self.max_keys_per_node
+    }
+
+    fn find_key(&self, key: Key) -> Result<usize, usize> {
+        self.entries
+            .binary_search_by_key(&key, |(entry_key, _)| *entry_key)
     }
 }
 
@@ -109,6 +137,8 @@ pub enum BTreeError {
     InvalidMaxKeysPerNode { max_keys_per_node: usize },
     /// La primera versión del capítulo no acepta claves duplicadas.
     DuplicateKey(Key),
+    /// El nodo raíz está lleno y el siguiente paso debe aplicar split.
+    NodeFullRequiresSplit { max_keys_per_node: usize },
     /// La representación interna apunta a un nodo que no existe.
     MissingNode(NodeId),
     /// Una invariante interna fue violada.
