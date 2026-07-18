@@ -109,7 +109,7 @@ Aplicación práctica:
 
 - [x] Diseñar API mínima: `BTree`, `NodeId`, `Key`, `RecordPointer`,
   `BTreeError`.
-- [ ] Escribir test rojo para búsqueda en árbol vacío.
+- [x] Escribir test rojo para búsqueda en árbol vacío.
 - [ ] Implementar búsqueda.
 - [ ] Escribir test rojo para inserción simple.
 - [ ] Implementar inserción sin split.
