@@ -111,7 +111,7 @@ Aplicación práctica:
   `BTreeError`.
 - [x] Escribir test rojo para búsqueda en árbol vacío.
 - [x] Implementar búsqueda.
-- [ ] Escribir test rojo para inserción simple.
+- [x] Escribir test rojo para inserción simple.
 - [ ] Implementar inserción sin split.
 - [ ] Escribir test rojo para split de nodo.
 - [ ] Implementar split educativo.
