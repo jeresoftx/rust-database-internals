@@ -112,7 +112,7 @@ Aplicación práctica:
 - [x] Escribir test rojo para búsqueda en árbol vacío.
 - [x] Implementar búsqueda.
 - [x] Escribir test rojo para inserción simple.
-- [ ] Implementar inserción sin split.
+- [x] Implementar inserción sin split.
 - [ ] Escribir test rojo para split de nodo.
 - [ ] Implementar split educativo.
 - [ ] Documentar invariantes: orden, fanout, altura balanceada, claves

@@ -152,6 +152,7 @@ Errores mínimos previstos:
 pub enum BTreeError {
     InvalidMaxKeysPerNode { max_keys_per_node: usize },
     DuplicateKey(Key),
+    NodeFullRequiresSplit { max_keys_per_node: usize },
     MissingNode(NodeId),
     InvariantViolation(&'static str),
 }
