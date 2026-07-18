@@ -124,7 +124,7 @@ Aplicación práctica:
 - [x] Documentar invariantes: orden, fanout, altura balanceada, claves
   separadoras y punteros.
 - [x] Crear diagrama Mermaid de nodo raíz, hojas y split.
-- [ ] Crear ejemplos progresivos y caso real de índice por primary key.
+- [x] Crear ejemplos progresivos y caso real de índice por primary key.
 - [ ] Crear ejercicios y soluciones.
 - [ ] Crear benchmark de búsqueda e inserción.
 - [ ] Actualizar README y ROADMAP a `benchmarked`.
