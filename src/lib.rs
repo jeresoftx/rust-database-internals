@@ -10,6 +10,8 @@
 //! documentados para entender por qué esos motores existen y qué problemas
 //! resuelven.
 
+pub mod btree;
+
 /// Devuelve el nombre canónico del curso.
 ///
 /// # Examples
