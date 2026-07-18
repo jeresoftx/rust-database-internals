@@ -121,7 +121,7 @@ Aplicación práctica:
 - [x] Implementar inserción sin split.
 - [x] Escribir test rojo para split de nodo.
 - [x] Implementar split educativo.
-- [ ] Documentar invariantes: orden, fanout, altura balanceada, claves
+- [x] Documentar invariantes: orden, fanout, altura balanceada, claves
   separadoras y punteros.
 - [ ] Crear diagrama Mermaid de nodo raíz, hojas y split.
 - [ ] Crear ejemplos progresivos y caso real de índice por primary key.
