@@ -107,7 +107,7 @@ Aplicación práctica:
 - Modify: `README.md`
 - Modify: `ROADMAP.md`
 
-- [ ] Diseñar API mínima: `BTree`, `NodeId`, `Key`, `RecordPointer`,
+- [x] Diseñar API mínima: `BTree`, `NodeId`, `Key`, `RecordPointer`,
   `BTreeError`.
 - [ ] Escribir test rojo para búsqueda en árbol vacío.
 - [ ] Implementar búsqueda.
