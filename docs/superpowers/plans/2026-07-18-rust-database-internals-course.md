@@ -43,6 +43,11 @@ Aplicación práctica:
 - Cada issue debe resolverse en una rama propia.
 - Cada PR debe apuntar a `main` y resumir el cambio, la verificación y el
   siguiente paso natural.
+- Cada PR debe estar asociado al mismo milestone que el issue que resuelve.
+- Cada issue y PR deben llevar labels coherentes de tipo, capítulo o fase, y
+  estado. Labels mínimos: `tipo: documentación`, `tipo: funcionalidad`,
+  `tipo: prueba`, `capítulo: b-tree`, `flujo: issue-pr` y
+  `estado: revisión`.
 - El PR queda abierto hasta que Joel apruebe explícitamente el merge.
 - Si un task es demasiado grande para un solo commit, se divide antes de
   comenzar y se crean issues separados.
@@ -75,6 +80,7 @@ Aplicación práctica:
 - [x] Crear estructura inicial conforme a RFC-0001 §15.
 - [x] Documentar flujo issue-commit-PR por paso del plan.
 - [x] Crear milestones e issues del plan completo, asignados a `jeresoftx`.
+- [x] Documentar milestones y labels obligatorios para PRs.
 - [ ] Desarrollar capítulo 01: B-Tree.
 - [ ] Desarrollar capítulo 02: LSM Tree.
 - [ ] Desarrollar capítulo 03: Índices.
