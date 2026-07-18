@@ -120,7 +120,7 @@ Aplicación práctica:
 - [x] Escribir test rojo para inserción simple.
 - [x] Implementar inserción sin split.
 - [x] Escribir test rojo para split de nodo.
-- [ ] Implementar split educativo.
+- [x] Implementar split educativo.
 - [ ] Documentar invariantes: orden, fanout, altura balanceada, claves
   separadoras y punteros.
 - [ ] Crear diagrama Mermaid de nodo raíz, hojas y split.

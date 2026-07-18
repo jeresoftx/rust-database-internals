@@ -83,6 +83,8 @@ impl BTree {
         key: Key,
         pointer: RecordPointer,
     ) -> Result<(), BTreeError>;
+    pub fn root_separator(&self) -> Option<Key>;
+    pub fn leaf_keys(&self) -> Vec<Vec<Key>>;
     pub fn validate(&self) -> Result<(), BTreeError>;
 }
 ```
@@ -171,6 +173,19 @@ con mensajes cortos. No debe usarse para esconder errores esperados por API.
 - `len` cuenta pares clave-puntero, no nodos.
 - `height` es `0` para un árbol vacío y `1` para un árbol con solo raíz.
 - La primera versión no acepta claves duplicadas.
+
+## Inspección Educativa
+
+El capítulo puede exponer métodos de inspección, aunque no serían parte normal
+de un índice de producción:
+
+- `root_separator` permite observar la clave separadora promovida después del
+  primer split.
+- `leaf_keys` permite verificar que las hojas conservan las claves ordenadas de
+  izquierda a derecha.
+
+Estos métodos existen para enseñar representación e invariantes. No sustituyen
+los métodos normales de lectura como `search`.
 
 ## Límites Explícitos Del Capítulo 01
 
