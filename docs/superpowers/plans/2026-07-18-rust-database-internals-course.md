@@ -26,6 +26,45 @@ cargo test --all-targets
 cargo test --doc
 ```
 
+## Flujo De Trabajo Por Paso
+
+Antes de tocar código de curso, este plan debe desarrollarse como milestones e
+issues en GitHub. A partir de ese tablero, cada paso se trabaja con la regla:
+
+```text
+milestone + issue asignado → 1 commit → 1 pull request → revisión humana → merge a main
+```
+
+Aplicación práctica:
+
+- Cada task o subtask accionable debe tener un issue propio.
+- Cada issue debe estar asignado a `jeresoftx`.
+- Cada issue debe pertenecer al milestone del capítulo o fase correspondiente.
+- Cada issue debe resolverse en una rama propia.
+- Cada PR debe apuntar a `main` y resumir el cambio, la verificación y el
+  siguiente paso natural.
+- El PR queda abierto hasta que Joel apruebe explícitamente el merge.
+- Si un task es demasiado grande para un solo commit, se divide antes de
+  comenzar y se crean issues separados.
+- No se continúa con el siguiente issue hasta cerrar o pausar explícitamente el
+  PR actual.
+
+## Milestones Del Plan
+
+| Milestone | Alcance | Issues |
+|-----------|---------|--------|
+| 00 Gobernanza y planificación | Reglas de trabajo, checklist operativo y preparación | #1 |
+| 01 B-Tree | Búsqueda, inserción, split, invariantes, docs, ejemplos y benchmark | #3-#16 |
+| 02 LSM Tree | MemTable, SSTable, búsqueda, flush y compaction | #17-#22 |
+| 03 Índices | Primarios, secundarios, únicos, no únicos y selectividad | #23-#26 |
+| 04 Transacciones | Manager, begin, commit, rollback y conflictos | #27-#30 |
+| 05 ACID | Propiedades, modelos mínimos y fallas parciales | #31-#33 |
+| 06 MVCC | Versiones, snapshots, timestamps y comparación con PostgreSQL | #34-#37 |
+| 07 Write-Ahead Log | Registros, append-only log, redo, undo y regla WAL | #38-#41 |
+| 08 Recovery | Crash, replay del WAL y checkpoints | #42-#44 |
+| 09 Replicación | Primary/replica, lag, confirmación y consistencia | #45-#48 |
+| 10 Query Optimizer | Plan lógico/físico, scans, costo y `EXPLAIN` | #49-#52 |
+
 ## Checklist General
 
 - [x] Crear repositorio GitHub `jeresoftx/rust-database-internals`.
@@ -34,6 +73,8 @@ cargo test --doc
   `databases`, `btree`, `lsm-tree`, `transactions`, `mvcc`, `wal`, `recovery`.
 - [x] Clonar en `repos/rust-database-internals`.
 - [x] Crear estructura inicial conforme a RFC-0001 §15.
+- [x] Documentar flujo issue-commit-PR por paso del plan.
+- [x] Crear milestones e issues del plan completo, asignados a `jeresoftx`.
 - [ ] Desarrollar capítulo 01: B-Tree.
 - [ ] Desarrollar capítulo 02: LSM Tree.
 - [ ] Desarrollar capítulo 03: Índices.
