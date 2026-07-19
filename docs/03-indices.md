@@ -2,7 +2,8 @@
 
 > **Estado:** borrador técnico de representación.
 > **Alcance actual:** índice primario, índice secundario, nombres de índice,
-> nombres de columna, rol del índice y destino lógico de búsqueda.
+> nombres de columna, rol del índice, destino lógico de búsqueda, índice único
+> e índice no único.
 
 ## Por Qué Existe
 
@@ -29,7 +30,9 @@ Piezas actuales:
 - `IndexName`: nombre lógico del índice;
 - `ColumnName`: columna usada por la llave de búsqueda;
 - `IndexRole`: distingue `Primary` y `Secondary`;
+- `IndexUniqueness`: distingue `Unique` y `NonUnique`;
 - `IndexTarget`: explica hacia dónde apunta el índice;
+- `IndexEntries`: modela entradas de índice y reglas de duplicado;
 - `IndexDefinition`: une nombre, rol, columnas y destino.
 
 Un índice primario apunta a `IndexTarget::RecordPointer`, porque su búsqueda
@@ -38,6 +41,10 @@ resuelve directamente la ubicación lógica del registro.
 Un índice secundario apunta a `IndexTarget::PrimaryKey`, porque su búsqueda no
 debe duplicar la identidad física de la fila. Primero encuentra la primary key y
 después esa clave permite llegar al registro por el camino canónico.
+
+Un índice primario se declara `Unique` porque la primary key identifica una fila
+canónica. Un índice secundario puede ser `Unique`, como un correo electrónico,
+o `NonUnique`, como país, ciudad o estado.
 
 ## Índice Primario
 
@@ -74,6 +81,31 @@ La segunda línea muestra por qué el índice secundario no reemplaza al primari
 su resultado necesita volver a la identidad principal. Esto mantiene separada
 la pregunta "por qué campo busco" de la pregunta "dónde está la fila".
 
+## Índice Único Y No Único
+
+La unicidad es una regla sobre la llave del índice.
+
+En un índice único, una llave de índice puede apuntar a una sola primary key:
+
+```text
+email = "ana@example.com" -> customer_id = 42
+email = "ana@example.com" -> customer_id = 99  // error
+```
+
+El error existe porque el índice promete que ese valor identifica a lo mucho una
+fila visible.
+
+En un índice no único, una llave de índice puede apuntar a varias primary keys:
+
+```text
+country = "MX" -> customer_id = 42
+country = "MX" -> customer_id = 99
+country = "MX" -> customer_id = 123
+```
+
+Este caso es común en columnas de clasificación. La búsqueda por país no
+identifica una sola fila; devuelve un conjunto de candidatos.
+
 ## Diagrama Mental
 
 ```mermaid
@@ -92,17 +124,19 @@ flowchart LR
 - Un `ColumnName` no puede estar vacío.
 - Un índice primario tiene rol `Primary`.
 - Un índice primario resuelve hacia `RecordPointer`.
+- Un índice primario se declara `Unique`.
 - Un índice secundario tiene rol `Secondary`.
 - Un índice secundario resuelve hacia la columna de primary key.
-- La definición del índice no decide todavía unicidad, selectividad ni costo.
+- Un índice secundario puede declararse `Unique` o `NonUnique`.
+- Un `IndexEntries` único rechaza una llave repetida.
+- Un `IndexEntries` no único permite varias primary keys para la misma llave.
+- Buscar una llave ausente devuelve un conjunto vacío de primary keys.
+- La definición del índice no decide todavía selectividad ni costo.
 
 ## Lo Que Todavía No Modela
 
 Este primer paso no implementa:
 
-- entradas dentro del índice;
-- índices únicos y no únicos;
-- duplicados en índices secundarios;
 - selectividad;
 - costo de mantenimiento al escribir;
 - uso de B-Tree o LSM Tree como estructura física;
