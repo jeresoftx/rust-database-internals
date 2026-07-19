@@ -171,7 +171,7 @@ soluciones y benchmark educativo completos. No se marca como `reviewed` ni
 
 - [x] Diseñar `TransactionId`, `TransactionState`, `TransactionManager`.
 - [x] Modelar begin, commit y rollback.
-- [ ] Modelar conflictos simples.
+- [x] Modelar conflictos simples.
 - [ ] Documentar atomicidad y aislamiento.
 
 ## Task 5: ACID
