@@ -85,7 +85,7 @@ Aplicación práctica:
 - [x] Desarrollar capítulo 01: B-Tree.
 - [ ] Desarrollar capítulo 02: LSM Tree.
 - [ ] Desarrollar capítulo 03: Índices.
-- [ ] Desarrollar capítulo 04: Transacciones.
+- [x] Desarrollar capítulo 04: Transacciones.
 - [ ] Desarrollar capítulo 05: ACID.
 - [ ] Desarrollar capítulo 06: MVCC.
 - [ ] Desarrollar capítulo 07: Write-Ahead Log.
@@ -172,7 +172,12 @@ soluciones y benchmark educativo completos. No se marca como `reviewed` ni
 - [x] Diseñar `TransactionId`, `TransactionState`, `TransactionManager`.
 - [x] Modelar begin, commit y rollback.
 - [x] Modelar conflictos simples.
-- [ ] Documentar atomicidad y aislamiento.
+- [x] Documentar atomicidad y aislamiento.
+- [x] Crear ejemplos progresivos de transacciones.
+- [x] Crear ejercicios y soluciones.
+- [x] Crear diagrama Mermaid de ciclo de vida y conflicto.
+- [x] Crear benchmark de ciclo de vida, locks y conflictos.
+- [x] Actualizar README y ROADMAP a `benchmarked`.
 
 ## Task 5: ACID
 

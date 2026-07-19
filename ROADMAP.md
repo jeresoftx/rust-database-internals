@@ -25,10 +25,12 @@ unicidad, selectividad, documentación de costos, ejemplos progresivos,
 ejercicios y benchmark manual. Su estado visible es `benchmarked`: tiene
 medición educativa, pero todavía no se marca como `reviewed` ni `published`.
 
-Transacciones está en estado `draft` con identidad, estado, administrador
-educativo, ciclo de vida mínimo mediante `begin`, `commit` y `rollback`, y
-conflictos simples con locks exclusivos por recurso lógico. El siguiente paso
-agrega documentación de atomicidad e aislamiento.
+Transacciones ya cuenta con identidad, estado, administrador educativo, ciclo
+de vida mínimo mediante `begin`, `commit` y `rollback`, y conflictos simples
+con locks exclusivos por recurso lógico. También incluye documentación de
+atomicidad y aislamiento, diagrama Mermaid, ejemplos progresivos, ejercicios,
+soluciones y benchmark manual. Su estado visible es `benchmarked`: tiene
+medición educativa, pero todavía no se marca como `reviewed` ni `published`.
 
 El checklist detallado vive en
 [`docs/superpowers/plans/2026-07-18-rust-database-internals-course.md`](docs/superpowers/plans/2026-07-18-rust-database-internals-course.md).
@@ -40,7 +42,7 @@ El checklist detallado vive en
 | 01 | B-Tree | benchmarked |
 | 02 | LSM Tree | draft |
 | 03 | Índices | benchmarked |
-| 04 | Transacciones | draft |
+| 04 | Transacciones | benchmarked |
 | 05 | ACID | planned |
 | 06 | MVCC | planned |
 | 07 | Write-Ahead Log | planned |

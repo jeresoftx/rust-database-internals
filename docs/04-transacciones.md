@@ -1,10 +1,10 @@
 # Transacciones
 
-> **Estado:** borrador técnico de ciclo de vida.
+> **Estado:** benchmarked.
 > **Alcance actual:** `TransactionId`, `TransactionState`,
 > `TransactionManager`, registro explícito de estado inicial, `begin`, `commit`,
 > `rollback`, validación de transiciones, `ResourceId` y locks exclusivos
-> educativos.
+> educativos, atomicidad, aislamiento, ejemplos, ejercicios y benchmark manual.
 
 ## Por Qué Existe
 
@@ -91,23 +91,144 @@ Ejemplo conceptual:
 Este modelo todavía no decide si `T2` debe esperar, abortar, reintentar o entrar
 a una cola. Solo nombra el conflicto y conserva quién mantiene el recurso.
 
+## Atomicidad
+
+Atomicidad significa que una unidad de trabajo termina como una sola intención.
+En un motor real, eso implica undo, redo, WAL, páginas sucias, recovery y
+decisiones de durabilidad. En este capítulo todavía no existe almacenamiento
+persistente, así que la atomicidad se modela en una frontera más pequeña:
+
+- una transacción solo puede estar abierta o cerrada;
+- `commit` representa aceptar la intención;
+- `rollback` representa descartarla;
+- después de cerrar, la transacción no puede volver a cambiar de estado;
+- cerrar la transacción libera los recursos que protegía.
+
+Esto no prueba que los datos hayan quedado durables. Sí deja una regla mental
+importante: una transacción no es una escritura individual, es el contenedor que
+decide si un conjunto de trabajo se acepta o se descarta.
+
+## Aislamiento
+
+Aislamiento significa que una transacción no debe observar o pisar trabajo de
+otra transacción de forma incoherente. Este modelo no implementa niveles como
+`Read Committed`, `Repeatable Read` o `Serializable`; solo enseña la primera
+forma visible de aislamiento: exclusión sobre un recurso lógico.
+
+Cuando `T1` toma `accounts/42`, `T2` no puede tomar ese mismo recurso hasta que
+`T1` haga `commit` o `rollback`. El resultado no es una espera automática: el
+administrador devuelve `ResourceConflict`. Esa respuesta explícita permite
+explicar una decisión de diseño que todo motor debe tomar después:
+
+- bloquear y esperar;
+- abortar;
+- reintentar;
+- ordenar las transacciones;
+- cambiar el nivel de aislamiento.
+
+El curso mantiene esa decisión fuera de este capítulo para no ocultar el
+mecanismo básico: antes de hablar de políticas, hay que ver el conflicto.
+
+## Ejemplos Progresivos
+
+Los ejemplos del capítulo viven en `examples/` y se pueden ejecutar con
+`cargo run --example <nombre>`.
+
+| Ejemplo | Propósito |
+|---------|-----------|
+| `transactions_basic` | Abrir una transacción y cerrarla con `commit`. |
+| `transactions_intermediate` | Mostrar un conflicto por lock exclusivo. |
+| `transactions_advanced` | Liberar un recurso con `rollback` y reintentarlo. |
+
+Estos ejemplos no mezclan todavía B-Tree, índices, MVCC ni WAL. El objetivo es
+aislar el vocabulario transaccional antes de integrarlo con otras capas.
+
+## Ejercicios
+
+Los ejercicios están graduados para practicar una idea por vez. Las soluciones
+ejecutables viven en `examples/soluciones/`.
+
+### Nivel 1: Commit
+
+Objetivo: observar que `commit` cierra una transacción activa.
+
+Tareas:
+
+- crear un `TransactionManager`;
+- abrir una transacción con `begin`;
+- ejecutar `commit`;
+- confirmar que el estado final es `TransactionState::Committed`.
+
+Solución: `cargo run --example transactions_commit`.
+
+### Nivel 2: Conflicto Exclusivo
+
+Objetivo: observar que dos transacciones activas no pueden tomar el mismo
+recurso exclusivo.
+
+Tareas:
+
+- abrir dos transacciones;
+- crear `ResourceId::new("accounts/42")`;
+- tomar el recurso desde la primera transacción;
+- intentar tomarlo desde la segunda;
+- confirmar que el error es `TransactionError::ResourceConflict`.
+
+Solución: `cargo run --example transactions_conflict`.
+
+### Nivel 3: Aislamiento Mínimo
+
+Objetivo: razonar por qué cerrar una transacción libera sus recursos.
+
+Tareas:
+
+- abrir dos transacciones;
+- tomar un recurso desde la primera;
+- cerrar la primera con `rollback`;
+- tomar el mismo recurso desde la segunda;
+- explicar por qué este comportamiento es una forma mínima de aislamiento.
+
+Solución: `cargo run --example transactions_isolation`.
+
+## Benchmark Manual
+
+El benchmark educativo vive en `benches/transactions_bench.rs` y se ejecuta con:
+
+```bash
+cargo bench --bench transactions_bench
+```
+
+Mide tres operaciones pequeñas:
+
+- abrir y confirmar transacciones;
+- tomar locks exclusivos sin conflicto;
+- detectar conflictos sobre un recurso caliente.
+
+El objetivo no es competir con un motor real. El objetivo es hacer visible que
+el ciclo de vida, el registro de locks y la detección de conflicto son caminos
+distintos dentro del administrador de transacciones.
+
 ## Diagrama Mental
+
+El diagrama fuente vive en `diagrams/04-transacciones.mmd`.
 
 ```mermaid
 flowchart LR
-    manager["TransactionManager"] --> next["next_transaction_id = 1"]
-    manager --> registry["registro de estados"]
-    begin["begin()"] --> id1["TransactionId(1)"]
-    id1 --> active["Active"]
-    active --> commit["commit(1)"]
-    active --> rollback["rollback(1)"]
-    active --> lock["lock_exclusive(accounts/42)"]
-    lock --> locks["locks[accounts/42] = TransactionId(1)"]
-    commit --> committed["Committed"]
-    rollback --> rolled_back["RolledBack"]
+    client["Cliente"] --> begin["begin()"]
+    begin --> active["TransactionState::Active"]
+    active --> lock["lock_exclusive(ResourceId)"]
+    lock --> owned["recurso protegido"]
+
+    other["Otra transacción activa"] --> request["lock_exclusive(mismo ResourceId)"]
+    request --> conflict["TransactionError::ResourceConflict"]
+
+    owned --> commit["commit()"]
+    owned --> rollback["rollback()"]
+    commit --> committed["TransactionState::Committed"]
+    rollback --> rolled_back["TransactionState::RolledBack"]
     committed --> release["liberar locks"]
     rolled_back --> release
-    release --> registry
+    release --> available["recurso disponible"]
 ```
 
 ## Invariantes Del Modelo
@@ -144,8 +265,9 @@ Este modelo todavía no implementa:
 
 - locks compartidos;
 - espera, timeouts, deadlocks o detección de ciclos;
-- aislamiento;
+- niveles formales de aislamiento;
 - WAL, recovery o durabilidad.
 
-La frontera es deliberada. Primero se nombra el sistema; después se agregan
-propiedades transaccionales más fuertes.
+La frontera es deliberada. Este capítulo deja claro el ciclo de vida y el
+conflicto. ACID, MVCC, WAL y recovery agregan propiedades más fuertes sobre
+esta base.
