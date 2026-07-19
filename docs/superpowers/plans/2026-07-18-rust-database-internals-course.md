@@ -198,7 +198,7 @@ soluciones y benchmark educativo completos. No se marca como `reviewed` ni
 
 ## Task 7: Write-Ahead Log
 
-- [ ] Diseñar registros de log.
+- [x] Diseñar registros de log.
 - [ ] Modelar append-only log.
 - [ ] Modelar redo y undo educativos.
 - [ ] Documentar regla: escribir log antes de modificar página.
