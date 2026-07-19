@@ -4,8 +4,8 @@
 //! que sostienen el mecanismo. Una LSM Tree escribe primero en memoria
 //! (`MemTable`), congela esa memoria en segmentos ordenados e inmutables
 //! (`SSTable`) y compacta varios segmentos en uno nuevo (`CompactionPlan`).
-//! El modelo actual ya acepta escrituras en memoria; búsqueda, flush y
-//! compaction quedan para pasos posteriores del capítulo.
+//! El modelo actual ya acepta escrituras en memoria y flush hacia SSTable;
+//! búsqueda entre segmentos y compaction quedan para pasos posteriores.
 
 use std::collections::{BTreeMap, HashSet};
 
@@ -72,6 +72,18 @@ impl MemTable {
             .map(|(key, value)| (*key, value.clone()))
             .collect()
     }
+
+    /// Congela las entradas actuales en una SSTable inmutable y vacía memoria.
+    pub fn flush_to_sstable(&mut self, segment_id: SegmentId) -> Result<SSTable, LsmTreeError> {
+        if self.is_empty() {
+            return Err(LsmTreeError::EmptyMemTableFlush);
+        }
+
+        let entries = self.entries();
+        self.entries.clear();
+
+        Ok(SSTable::from_entries(segment_id, entries))
+    }
 }
 
 /// Clave comparable de una MemTable o SSTable educativa.
@@ -117,6 +129,7 @@ impl From<&str> for LsmValue {
 pub struct SSTable {
     segment_id: SegmentId,
     key_count: usize,
+    entries: Vec<(LsmKey, LsmValue)>,
 }
 
 impl SSTable {
@@ -125,6 +138,18 @@ impl SSTable {
         Self {
             segment_id,
             key_count,
+            entries: Vec::new(),
+        }
+    }
+
+    /// Crea una SSTable desde entradas ya ordenadas.
+    pub fn from_entries(segment_id: SegmentId, entries: Vec<(LsmKey, LsmValue)>) -> Self {
+        let key_count = entries.len();
+
+        Self {
+            segment_id,
+            key_count,
+            entries,
         }
     }
 
@@ -141,6 +166,11 @@ impl SSTable {
     /// Devuelve `true` cuando el segmento no contiene claves.
     pub fn is_empty(&self) -> bool {
         self.key_count == 0
+    }
+
+    /// Devuelve el snapshot ordenado almacenado en el segmento.
+    pub fn entries(&self) -> Vec<(LsmKey, LsmValue)> {
+        self.entries.clone()
     }
 }
 
@@ -215,6 +245,8 @@ pub enum LsmTreeError {
     InvalidMemTableCapacity { max_entries: usize },
     /// Una compaction sin entradas no produciría aprendizaje ni datos.
     EmptyCompactionInput,
+    /// Un flush vacío produciría un segmento sin frontera educativa clara.
+    EmptyMemTableFlush,
     /// Un segmento aparece más de una vez como entrada.
     DuplicateCompactionInput(SegmentId),
     /// El segmento de salida ya aparece como entrada.

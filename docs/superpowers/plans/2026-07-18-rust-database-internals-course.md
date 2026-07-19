@@ -155,7 +155,7 @@ soluciones y benchmark educativo completos. No se marca como `reviewed` ni
 - [x] Diseñar `MemTable`, `SSTable`, `SegmentId`, `CompactionPlan`,
   `LsmTreeError`.
 - [x] Modelar escrituras en memoria.
-- [ ] Modelar flush a segmentos inmutables.
+- [x] Modelar flush a segmentos inmutables.
 - [ ] Modelar búsqueda entre memtable y segmentos.
 - [ ] Modelar compaction educativa.
 - [ ] Documentar tradeoffs frente a B-Tree.

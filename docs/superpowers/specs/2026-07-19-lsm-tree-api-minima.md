@@ -17,8 +17,9 @@ capítulo debe separar cuatro ideas:
 ## Frontera Actual
 
 El issue #17 definió contratos pequeños para no reinventar vocabulario en cada
-paso. El issue #18 agrega escrituras en memoria. Búsqueda, flush y compaction
-real quedan fuera de esta frontera.
+paso. El issue #18 agregó escrituras en memoria. El issue #19 agrega flush de
+MemTable a SSTable. Búsqueda entre segmentos y compaction real quedan fuera de
+esta frontera.
 
 ## Invariantes Iniciales
 
@@ -28,8 +29,13 @@ real quedan fuera de esta frontera.
 - Las entradas visibles de una `MemTable` se exponen en orden ascendente por
   clave.
 - Una `MemTable` llena rechaza claves nuevas hasta que exista flush.
+- Un flush vacío devuelve `LsmTreeError::EmptyMemTableFlush`.
+- Un flush con datos produce una `SSTable` con snapshot ordenado y deja la
+  `MemTable` vacía.
 - Una `SSTable` se identifica por `SegmentId`.
 - Una `SSTable` puede estar vacía como metadato educativo.
+- Una `SSTable` creada por flush no cambia si después se vuelve a escribir en
+  la `MemTable`.
 - Un `CompactionPlan` necesita al menos un segmento de entrada.
 - Un `CompactionPlan` no acepta entradas duplicadas.
 - El segmento de salida de una compaction debe ser nuevo.

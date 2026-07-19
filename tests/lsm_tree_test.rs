@@ -92,6 +92,67 @@ fn memtable_rejects_new_key_when_full() {
 }
 
 #[test]
+fn memtable_flushes_entries_into_immutable_sstable() {
+    let mut memtable = MemTable::new(4).expect("una capacidad positiva debe crear una MemTable");
+    memtable
+        .write(LsmKey::new(30), LsmValue::from("thirty"))
+        .expect("la escritura debe caber");
+    memtable
+        .write(LsmKey::new(10), LsmValue::from("ten"))
+        .expect("la escritura debe caber");
+
+    let sstable = memtable
+        .flush_to_sstable(SegmentId::new(9))
+        .expect("una MemTable con entradas debe producir una SSTable");
+
+    assert!(memtable.is_empty());
+    assert_eq!(memtable.len(), 0);
+    assert_eq!(sstable.segment_id(), SegmentId::new(9));
+    assert_eq!(sstable.key_count(), 2);
+    assert_eq!(
+        sstable.entries(),
+        vec![
+            (LsmKey::new(10), LsmValue::from("ten")),
+            (LsmKey::new(30), LsmValue::from("thirty")),
+        ]
+    );
+}
+
+#[test]
+fn memtable_flush_rejects_empty_memtable() {
+    let mut memtable = MemTable::new(4).expect("una capacidad positiva debe crear una MemTable");
+
+    assert_eq!(
+        memtable.flush_to_sstable(SegmentId::new(1)),
+        Err(LsmTreeError::EmptyMemTableFlush)
+    );
+}
+
+#[test]
+fn flushed_sstable_is_not_changed_by_later_memtable_writes() {
+    let mut memtable = MemTable::new(4).expect("una capacidad positiva debe crear una MemTable");
+    memtable
+        .write(LsmKey::new(1), LsmValue::from("before"))
+        .expect("la escritura debe caber");
+    let sstable = memtable
+        .flush_to_sstable(SegmentId::new(11))
+        .expect("una MemTable con entradas debe producir una SSTable");
+
+    memtable
+        .write(LsmKey::new(1), LsmValue::from("after"))
+        .expect("la escritura posterior debe caber");
+
+    assert_eq!(
+        sstable.entries(),
+        vec![(LsmKey::new(1), LsmValue::from("before"))]
+    );
+    assert_eq!(
+        memtable.entries(),
+        vec![(LsmKey::new(1), LsmValue::from("after"))]
+    );
+}
+
+#[test]
 fn sstable_declares_segment_identity_and_key_count() {
     let segment = SegmentId::new(7);
     let sstable = SSTable::new(segment, 128);
