@@ -1,5 +1,6 @@
 use rust_database_internals::mvcc::{
-    LogicalTimestamp, MvccError, RecordId, RecordValue, RecordVersion, VersionChain, VersionId,
+    LogicalTimestamp, MvccError, RecordId, RecordValue, RecordVersion, Snapshot, VersionChain,
+    VersionId,
 };
 
 #[test]
@@ -31,6 +32,13 @@ fn logical_timestamp_exposes_value() {
     let timestamp = LogicalTimestamp::new(42);
 
     assert_eq!(timestamp.value(), 42);
+}
+
+#[test]
+fn snapshot_exposes_read_timestamp() {
+    let snapshot = Snapshot::new(LogicalTimestamp::new(42));
+
+    assert_eq!(snapshot.read_at(), LogicalTimestamp::new(42));
 }
 
 #[test]
@@ -122,6 +130,54 @@ fn record_version_rejects_second_delete() {
 }
 
 #[test]
+fn record_version_is_visible_after_creation() {
+    let record_id = RecordId::new("accounts/42").expect("id válido");
+    let value = RecordValue::new("saldo=100").expect("valor válido");
+    let version = RecordVersion::new(
+        record_id,
+        VersionId::new(1),
+        LogicalTimestamp::new(10),
+        value,
+    );
+    let snapshot = Snapshot::new(LogicalTimestamp::new(10));
+
+    assert!(version.is_visible_in(&snapshot));
+}
+
+#[test]
+fn record_version_is_not_visible_before_creation() {
+    let record_id = RecordId::new("accounts/42").expect("id válido");
+    let value = RecordValue::new("saldo=100").expect("valor válido");
+    let version = RecordVersion::new(
+        record_id,
+        VersionId::new(1),
+        LogicalTimestamp::new(10),
+        value,
+    );
+    let snapshot = Snapshot::new(LogicalTimestamp::new(9));
+
+    assert!(!version.is_visible_in(&snapshot));
+}
+
+#[test]
+fn record_version_is_not_visible_at_delete_timestamp() {
+    let record_id = RecordId::new("accounts/42").expect("id válido");
+    let value = RecordValue::new("saldo=100").expect("valor válido");
+    let mut version = RecordVersion::new(
+        record_id,
+        VersionId::new(1),
+        LogicalTimestamp::new(10),
+        value,
+    );
+    version
+        .delete_at(LogicalTimestamp::new(12))
+        .expect("borrado lógico válido");
+    let snapshot = Snapshot::new(LogicalTimestamp::new(12));
+
+    assert!(!version.is_visible_in(&snapshot));
+}
+
+#[test]
 fn version_chain_starts_empty_for_record() {
     let record_id = RecordId::new("accounts/42").expect("id válido");
     let chain = VersionChain::new(record_id.clone());
@@ -130,6 +186,113 @@ fn version_chain_starts_empty_for_record() {
     assert!(chain.is_empty());
     assert_eq!(chain.len(), 0);
     assert_eq!(chain.latest(), None);
+}
+
+#[test]
+fn version_chain_reads_none_when_empty() {
+    let record_id = RecordId::new("accounts/42").expect("id válido");
+    let chain = VersionChain::new(record_id);
+    let snapshot = Snapshot::new(LogicalTimestamp::new(10));
+
+    assert_eq!(chain.read(&snapshot), None);
+}
+
+#[test]
+fn version_chain_reads_none_before_first_version() {
+    let record_id = RecordId::new("accounts/42").expect("id válido");
+    let mut chain = VersionChain::new(record_id);
+    chain
+        .append(
+            LogicalTimestamp::new(10),
+            RecordValue::new("saldo=100").expect("valor válido"),
+        )
+        .expect("primera versión debe entrar");
+    let snapshot = Snapshot::new(LogicalTimestamp::new(9));
+
+    assert_eq!(chain.read(&snapshot), None);
+}
+
+#[test]
+fn version_chain_reads_original_version_for_old_snapshot() {
+    let record_id = RecordId::new("accounts/42").expect("id válido");
+    let mut chain = VersionChain::new(record_id);
+    chain
+        .append(
+            LogicalTimestamp::new(10),
+            RecordValue::new("saldo=100").expect("valor válido"),
+        )
+        .expect("primera versión debe entrar");
+    chain
+        .delete_latest_at(LogicalTimestamp::new(12))
+        .expect("cerrar la versión anterior debe ser válido");
+    chain
+        .append(
+            LogicalTimestamp::new(12),
+            RecordValue::new("saldo=120").expect("valor válido"),
+        )
+        .expect("segunda versión debe entrar");
+    let snapshot = Snapshot::new(LogicalTimestamp::new(11));
+
+    let visible = chain.read(&snapshot).expect("snapshot antiguo ve v1");
+
+    assert_eq!(visible.version_id(), VersionId::new(1));
+    assert_eq!(visible.value().as_str(), "saldo=100");
+}
+
+#[test]
+fn version_chain_reads_newer_version_for_later_snapshot() {
+    let record_id = RecordId::new("accounts/42").expect("id válido");
+    let mut chain = VersionChain::new(record_id);
+    chain
+        .append(
+            LogicalTimestamp::new(10),
+            RecordValue::new("saldo=100").expect("valor válido"),
+        )
+        .expect("primera versión debe entrar");
+    chain
+        .delete_latest_at(LogicalTimestamp::new(12))
+        .expect("cerrar la versión anterior debe ser válido");
+    chain
+        .append(
+            LogicalTimestamp::new(12),
+            RecordValue::new("saldo=120").expect("valor válido"),
+        )
+        .expect("segunda versión debe entrar");
+    let snapshot = Snapshot::new(LogicalTimestamp::new(12));
+
+    let visible = chain.read(&snapshot).expect("snapshot nuevo ve v2");
+
+    assert_eq!(visible.version_id(), VersionId::new(2));
+    assert_eq!(visible.value().as_str(), "saldo=120");
+}
+
+#[test]
+fn version_chain_reads_none_after_delete_without_replacement() {
+    let record_id = RecordId::new("accounts/42").expect("id válido");
+    let mut chain = VersionChain::new(record_id);
+    chain
+        .append(
+            LogicalTimestamp::new(10),
+            RecordValue::new("saldo=100").expect("valor válido"),
+        )
+        .expect("primera versión debe entrar");
+    chain
+        .delete_latest_at(LogicalTimestamp::new(12))
+        .expect("cerrar la versión debe ser válido");
+    let snapshot = Snapshot::new(LogicalTimestamp::new(12));
+
+    assert_eq!(chain.read(&snapshot), None);
+}
+
+#[test]
+fn version_chain_rejects_delete_when_empty() {
+    let record_id = RecordId::new("accounts/42").expect("id válido");
+    let mut chain = VersionChain::new(record_id);
+
+    assert_eq!(
+        chain.delete_latest_at(LogicalTimestamp::new(12)),
+        Err(MvccError::EmptyVersionChain)
+    );
 }
 
 #[test]
