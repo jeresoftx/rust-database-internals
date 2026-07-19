@@ -4,8 +4,8 @@
 //! que sostienen el mecanismo. Una LSM Tree escribe primero en memoria
 //! (`MemTable`), congela esa memoria en segmentos ordenados e inmutables
 //! (`SSTable`) y compacta varios segmentos en uno nuevo (`CompactionPlan`).
-//! El modelo actual ya acepta escrituras en memoria y flush hacia SSTable;
-//! búsqueda entre segmentos y compaction quedan para pasos posteriores.
+//! El modelo actual ya acepta escrituras en memoria, flush hacia SSTable,
+//! búsqueda por precedencia y compaction educativa.
 
 use std::collections::{BTreeMap, HashSet};
 
@@ -46,6 +46,55 @@ impl LsmTree {
                 .rev()
                 .find_map(|segment| segment.search(key))
         })
+    }
+
+    /// Compacta segmentos existentes en un nuevo segmento inmutable.
+    ///
+    /// La compaction conserva la versión visible más reciente de cada clave:
+    /// si una clave aparece en varios segmentos de entrada, gana el segmento
+    /// que fue creado después dentro del árbol. Los segmentos fuera del plan
+    /// se conservan en su orden original y el resultado compactado se agrega
+    /// como el segmento más reciente.
+    pub fn compact(&mut self, plan: CompactionPlan) -> Result<(), LsmTreeError> {
+        for input_segment in plan.input_segments() {
+            if !self
+                .segments
+                .iter()
+                .any(|segment| segment.segment_id() == *input_segment)
+            {
+                return Err(LsmTreeError::MissingSegment(*input_segment));
+            }
+        }
+
+        if self
+            .segments
+            .iter()
+            .any(|segment| segment.segment_id() == plan.output_segment())
+        {
+            return Err(LsmTreeError::OutputSegmentConflicts(plan.output_segment()));
+        }
+
+        let input_segments: HashSet<_> = plan.input_segments().iter().copied().collect();
+        let mut compacted_entries = BTreeMap::new();
+
+        for segment in &self.segments {
+            if input_segments.contains(&segment.segment_id()) {
+                for (key, value) in segment.entries() {
+                    compacted_entries.insert(key, value);
+                }
+            }
+        }
+
+        let output_segment = SSTable::from_entries(
+            plan.output_segment(),
+            compacted_entries.into_iter().collect(),
+        );
+
+        self.segments
+            .retain(|segment| !input_segments.contains(&segment.segment_id()));
+        self.segments.push(output_segment);
+
+        Ok(())
     }
 
     /// Segmentos inmutables en orden de creación.
@@ -259,7 +308,8 @@ impl CompactionPlan {
     /// Crea un plan de compaction.
     ///
     /// La salida debe ser un segmento nuevo y los segmentos de entrada no
-    /// deben repetirse. El algoritmo de merge se modelará después.
+    /// deben repetirse. La existencia de esos segmentos se valida contra el
+    /// árbol al ejecutar la compaction.
     pub fn new(
         input_segments: Vec<SegmentId>,
         output_segment: SegmentId,
