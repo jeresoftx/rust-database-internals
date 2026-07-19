@@ -14,10 +14,11 @@ ejercicios, soluciones y benchmark manual. Su estado visible es
 `benchmarked`: el capítulo tiene medición educativa, pero todavía no se marca
 como `reviewed` ni `published` hasta completar la revisión humana del bloque.
 
-La siguiente línea natural es comenzar LSM Tree, porque B-Tree ya dejó el
-vocabulario base de orden, altura, separadores, punteros y costo local. LSM
-Tree debe contrastar ese modelo con escrituras primero en memoria, segmentos
-inmutables, flush y compaction.
+LSM Tree ya cuenta con API mínima, escrituras en memoria, flush, búsqueda,
+compaction educativa y un primer capítulo de tradeoffs frente a B-Tree. Su
+estado visible es `draft`: el mecanismo central existe, pero aún faltan
+ejemplos, ejercicios, soluciones, diagramas finales y benchmark educativo antes
+de elevarlo a `benchmarked`.
 
 El checklist detallado vive en
 [`docs/superpowers/plans/2026-07-18-rust-database-internals-course.md`](docs/superpowers/plans/2026-07-18-rust-database-internals-course.md).
@@ -27,7 +28,7 @@ El checklist detallado vive en
 | # | Capítulo | Estado |
 |---|----------|--------|
 | 01 | B-Tree | benchmarked |
-| 02 | LSM Tree | planned |
+| 02 | LSM Tree | draft |
 | 03 | Índices | planned |
 | 04 | Transacciones | planned |
 | 05 | ACID | planned |
