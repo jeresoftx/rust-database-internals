@@ -8,10 +8,15 @@ orienta el avance, pero no convierte el curso en una carrera por terminar.
 
 ## Estado Actual
 
-El repositorio acaba de nacer con la estructura inicial del curso. La siguiente
-línea natural es desarrollar el plan completo del curso y comenzar por B-Tree,
-porque conecta directamente con `rust-data-structures` y sostiene índices,
-storage engines y query planning.
+El capítulo 01, B-Tree, ya cuenta con API mínima, pruebas, split educativo,
+documentación de invariantes, diagrama Mermaid, ejemplos progresivos,
+ejercicios, soluciones y benchmark manual. Su estado visible es
+`benchmarked`: el capítulo tiene medición educativa, pero todavía no se marca
+como `reviewed` ni `published` hasta completar la revisión humana del bloque.
+
+La siguiente línea natural es cerrar la verificación final del capítulo y
+preparar el paso hacia LSM Tree, porque B-Tree ya dejó el vocabulario base de
+orden, altura, separadores, punteros y costo local.
 
 El checklist detallado vive en
 [`docs/superpowers/plans/2026-07-18-rust-database-internals-course.md`](docs/superpowers/plans/2026-07-18-rust-database-internals-course.md).
@@ -20,7 +25,7 @@ El checklist detallado vive en
 
 | # | Capítulo | Estado |
 |---|----------|--------|
-| 01 | B-Tree | planned |
+| 01 | B-Tree | benchmarked |
 | 02 | LSM Tree | planned |
 | 03 | Índices | planned |
 | 04 | Transacciones | planned |

@@ -60,16 +60,18 @@ Cada paso del plan se trabaja con trazabilidad mínima:
 2. Crear una rama corta y descriptiva desde `main`.
 3. Hacer exactamente un commit principal para ese paso.
 4. Abrir un pull request hacia `main`.
-5. Asociar el PR al mismo milestone del issue que resuelve.
-6. Agregar labels coherentes al issue y al PR.
-7. Entregar un resumen breve para revisión humana.
-8. Esperar aprobación explícita antes de fusionar el PR.
+5. Asignar el PR a `jeresoftx`.
+6. Asociar el PR al mismo milestone del issue que resuelve.
+7. Agregar labels coherentes al issue y al PR.
+8. Entregar un resumen breve para revisión humana.
+9. Esperar aprobación explícita antes de fusionar el PR.
 
 Reglas operativas:
 
 - Un paso del plan equivale a un issue, un commit y un PR.
 - Cada issue debe estar asignado a `jeresoftx`.
 - Cada issue debe pertenecer al milestone del capítulo o fase correspondiente.
+- Cada PR debe estar asignado a `jeresoftx`.
 - Cada PR debe pertenecer al mismo milestone que el issue que resuelve.
 - Cada issue y PR deben tener labels suficientes para entender tipo, capítulo o
   fase, y estado de revisión.

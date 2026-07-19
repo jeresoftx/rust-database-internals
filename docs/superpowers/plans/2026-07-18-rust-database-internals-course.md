@@ -32,7 +32,7 @@ Antes de tocar código de curso, este plan debe desarrollarse como milestones e
 issues en GitHub. A partir de ese tablero, cada paso se trabaja con la regla:
 
 ```text
-milestone + issue asignado → 1 commit → 1 pull request → revisión humana → merge a main
+milestone + issue asignado → 1 commit → PR asignado → revisión humana → merge a main
 ```
 
 Aplicación práctica:
@@ -43,6 +43,7 @@ Aplicación práctica:
 - Cada issue debe resolverse en una rama propia.
 - Cada PR debe apuntar a `main` y resumir el cambio, la verificación y el
   siguiente paso natural.
+- Cada PR debe estar asignado a `jeresoftx`.
 - Cada PR debe estar asociado al mismo milestone que el issue que resuelve.
 - Cada issue y PR deben llevar labels coherentes de tipo, capítulo o fase, y
   estado. Labels mínimos: `tipo: documentación`, `tipo: funcionalidad`,
@@ -80,7 +81,7 @@ Aplicación práctica:
 - [x] Crear estructura inicial conforme a RFC-0001 §15.
 - [x] Documentar flujo issue-commit-PR por paso del plan.
 - [x] Crear milestones e issues del plan completo, asignados a `jeresoftx`.
-- [x] Documentar milestones y labels obligatorios para PRs.
+- [x] Documentar milestones, labels y asignación obligatoria para PRs.
 - [ ] Desarrollar capítulo 01: B-Tree.
 - [ ] Desarrollar capítulo 02: LSM Tree.
 - [ ] Desarrollar capítulo 03: Índices.
@@ -127,7 +128,7 @@ Aplicación práctica:
 - [x] Crear ejemplos progresivos y caso real de índice por primary key.
 - [x] Crear ejercicios y soluciones.
 - [x] Crear benchmark de búsqueda e inserción.
-- [ ] Actualizar README y ROADMAP a `benchmarked`.
+- [x] Actualizar README y ROADMAP a `benchmarked`.
 - [ ] Verificar y hacer commit: `feat: add btree chapter`.
 
 ## Task 2: LSM Tree
