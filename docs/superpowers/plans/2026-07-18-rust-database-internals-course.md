@@ -82,7 +82,7 @@ Aplicación práctica:
 - [x] Documentar flujo issue-commit-PR por paso del plan.
 - [x] Crear milestones e issues del plan completo, asignados a `jeresoftx`.
 - [x] Documentar milestones, labels y asignación obligatoria para PRs.
-- [ ] Desarrollar capítulo 01: B-Tree.
+- [x] Desarrollar capítulo 01: B-Tree.
 - [ ] Desarrollar capítulo 02: LSM Tree.
 - [ ] Desarrollar capítulo 03: Índices.
 - [ ] Desarrollar capítulo 04: Transacciones.
@@ -129,7 +129,26 @@ Aplicación práctica:
 - [x] Crear ejercicios y soluciones.
 - [x] Crear benchmark de búsqueda e inserción.
 - [x] Actualizar README y ROADMAP a `benchmarked`.
-- [ ] Verificar y hacer commit: `feat: add btree chapter`.
+- [x] Verificar y hacer commit: `docs: close btree verification`.
+
+### Registro De Verificación
+
+El cierre técnico de B-Tree se prepara en el issue #16. Antes de abrir el PR
+final del capítulo se ejecuta la batería completa:
+
+```bash
+cargo fmt --check
+cargo clippy --all-targets --all-features -- -D warnings
+cargo test --all-targets
+cargo test --doc
+cargo bench --bench btree_bench
+git diff --check
+```
+
+Resultado esperado para revisión humana: el capítulo queda en estado
+`benchmarked`, con API, pruebas, documentación, ejemplos, ejercicios,
+soluciones y benchmark educativo completos. No se marca como `reviewed` ni
+`published` hasta que Joel revise y apruebe el bloque.
 
 ## Task 2: LSM Tree
 

@@ -14,9 +14,10 @@ ejercicios, soluciones y benchmark manual. Su estado visible es
 `benchmarked`: el capítulo tiene medición educativa, pero todavía no se marca
 como `reviewed` ni `published` hasta completar la revisión humana del bloque.
 
-La siguiente línea natural es cerrar la verificación final del capítulo y
-preparar el paso hacia LSM Tree, porque B-Tree ya dejó el vocabulario base de
-orden, altura, separadores, punteros y costo local.
+La siguiente línea natural es comenzar LSM Tree, porque B-Tree ya dejó el
+vocabulario base de orden, altura, separadores, punteros y costo local. LSM
+Tree debe contrastar ese modelo con escrituras primero en memoria, segmentos
+inmutables, flush y compaction.
 
 El checklist detallado vive en
 [`docs/superpowers/plans/2026-07-18-rust-database-internals-course.md`](docs/superpowers/plans/2026-07-18-rust-database-internals-course.md).
