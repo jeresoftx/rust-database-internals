@@ -1,15 +1,15 @@
 # Especificación: TransactionManager Educativo
 
-> **Issues:** #27, #28, #29
+> **Issues:** #27, #28, #29, #30
 > **Milestone:** 04 Transacciones
-> **Estado:** borrador técnico de ciclo de vida y conflictos simples.
+> **Estado:** benchmarked.
 
 ## Propósito
 
 La primera frontera del capítulo de Transacciones define identidad, estado,
-registro, transiciones mínimas y conflictos simples. No intenta todavía
-resolver atomicidad ni aislamiento; prepara el lenguaje para modelar
-operaciones posteriores.
+registro, transiciones mínimas y conflictos simples. Documenta atomicidad e
+aislamiento desde el alcance educativo del módulo: ciclo de vida, estados
+terminales, locks exclusivos y liberación de recursos al cerrar.
 
 ## API Actual
 
@@ -25,6 +25,11 @@ operaciones posteriores.
 - `TransactionManager::lock_owner`: consulta qué transacción conserva un
   recurso.
 - `TransactionError`: errores del modelo educativo.
+- Ejemplos progresivos: `transactions_basic`, `transactions_intermediate` y
+  `transactions_advanced`.
+- Soluciones ejecutables: `transactions_commit`, `transactions_conflict` y
+  `transactions_isolation`.
+- Benchmark manual: `transactions_bench`.
 
 ## Invariantes
 
@@ -70,3 +75,9 @@ mantiene el foco del capítulo en la representación del conflicto: quién tiene
 un recurso, quién lo pide y cuándo se libera. No modela colas, espera,
 deadlocks, lock escalation ni niveles de aislamiento; esas decisiones pertenecen
 a pasos posteriores del curso.
+
+La documentación de atomicidad y aislamiento evita prometer propiedades que el
+modelo todavía no tiene. Atomicidad se explica como ciclo de vida y cierre
+terminal; aislamiento se explica como exclusión mínima sobre un recurso lógico.
+Durabilidad, recovery, MVCC y niveles formales de aislamiento quedan para sus
+capítulos propios.

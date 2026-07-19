@@ -37,6 +37,18 @@ path = "examples/soluciones/indexes_selectivity.rs"
 name = "indexes_maintenance"
 path = "examples/soluciones/indexes_maintenance.rs"
 
+[[example]]
+name = "transactions_commit"
+path = "examples/soluciones/transactions_commit.rs"
+
+[[example]]
+name = "transactions_conflict"
+path = "examples/soluciones/transactions_conflict.rs"
+
+[[example]]
+name = "transactions_isolation"
+path = "examples/soluciones/transactions_isolation.rs"
+
 [[bench]]
 name = "btree_bench"
 path = "benches/btree_bench.rs"
@@ -45,4 +57,9 @@ harness = false
 [[bench]]
 name = "indexes_bench"
 path = "benches/indexes_bench.rs"
+harness = false
+
+[[bench]]
+name = "transactions_bench"
+path = "benches/transactions_bench.rs"
 harness = false

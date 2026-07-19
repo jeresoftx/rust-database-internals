@@ -1,0 +1,16 @@
+flowchart LR
+    client["Cliente"] --> begin["begin()"]
+    begin --> active["TransactionState::Active"]
+    active --> lock["lock_exclusive(ResourceId)"]
+    lock --> owned["recurso protegido"]
+
+    other["Otra transacción activa"] --> request["lock_exclusive(mismo ResourceId)"]
+    request --> conflict["TransactionError::ResourceConflict"]
+
+    owned --> commit["commit()"]
+    owned --> rollback["rollback()"]
+    commit --> committed["TransactionState::Committed"]
+    rollback --> rolled_back["TransactionState::RolledBack"]
+    committed --> release["liberar locks"]
+    rolled_back --> release
+    release --> available["recurso disponible"]
