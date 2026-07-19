@@ -193,6 +193,124 @@ fn lsm_tree_search_returns_none_when_key_is_absent() {
 }
 
 #[test]
+fn lsm_tree_compaction_keeps_newest_value_for_duplicate_keys() {
+    let mut tree = LsmTree::new(4).expect("una capacidad positiva debe crear un LSM Tree");
+    tree.write(LsmKey::new(1), LsmValue::from("old"))
+        .expect("la escritura debe caber");
+    tree.write(LsmKey::new(2), LsmValue::from("two"))
+        .expect("la escritura debe caber");
+    tree.flush_to_sstable(SegmentId::new(1))
+        .expect("el primer flush debe crear un segmento");
+    tree.write(LsmKey::new(1), LsmValue::from("new"))
+        .expect("la escritura debe caber");
+    tree.write(LsmKey::new(3), LsmValue::from("three"))
+        .expect("la escritura debe caber");
+    tree.flush_to_sstable(SegmentId::new(2))
+        .expect("el segundo flush debe crear un segmento");
+
+    let plan = CompactionPlan::new(
+        vec![SegmentId::new(1), SegmentId::new(2)],
+        SegmentId::new(3),
+    )
+    .expect("un plan con entradas distintas debe ser válido");
+
+    assert_eq!(tree.compact(plan), Ok(()));
+
+    assert_eq!(tree.segments().len(), 1);
+    assert_eq!(tree.segments()[0].segment_id(), SegmentId::new(3));
+    assert_eq!(
+        tree.segments()[0].entries(),
+        vec![
+            (LsmKey::new(1), LsmValue::from("new")),
+            (LsmKey::new(2), LsmValue::from("two")),
+            (LsmKey::new(3), LsmValue::from("three")),
+        ]
+    );
+    assert_eq!(tree.search(LsmKey::new(1)), Some(LsmValue::from("new")));
+}
+
+#[test]
+fn lsm_tree_compaction_keeps_segments_outside_plan() {
+    let mut tree = LsmTree::new(4).expect("una capacidad positiva debe crear un LSM Tree");
+    tree.write(LsmKey::new(1), LsmValue::from("one"))
+        .expect("la escritura debe caber");
+    tree.flush_to_sstable(SegmentId::new(1))
+        .expect("el primer flush debe crear un segmento");
+    tree.write(LsmKey::new(2), LsmValue::from("two"))
+        .expect("la escritura debe caber");
+    tree.flush_to_sstable(SegmentId::new(2))
+        .expect("el segundo flush debe crear un segmento");
+    tree.write(LsmKey::new(3), LsmValue::from("three"))
+        .expect("la escritura debe caber");
+    tree.flush_to_sstable(SegmentId::new(3))
+        .expect("el tercer flush debe crear un segmento");
+
+    let plan = CompactionPlan::new(
+        vec![SegmentId::new(1), SegmentId::new(3)],
+        SegmentId::new(4),
+    )
+    .expect("un plan con entradas distintas debe ser válido");
+
+    assert_eq!(tree.compact(plan), Ok(()));
+
+    let segment_ids: Vec<_> = tree
+        .segments()
+        .iter()
+        .map(|segment| segment.segment_id())
+        .collect();
+    assert_eq!(segment_ids, vec![SegmentId::new(2), SegmentId::new(4)]);
+    assert_eq!(tree.search(LsmKey::new(1)), Some(LsmValue::from("one")));
+    assert_eq!(tree.search(LsmKey::new(2)), Some(LsmValue::from("two")));
+    assert_eq!(tree.search(LsmKey::new(3)), Some(LsmValue::from("three")));
+}
+
+#[test]
+fn lsm_tree_compaction_rejects_missing_segment() {
+    let mut tree = LsmTree::new(4).expect("una capacidad positiva debe crear un LSM Tree");
+    tree.write(LsmKey::new(1), LsmValue::from("one"))
+        .expect("la escritura debe caber");
+    tree.flush_to_sstable(SegmentId::new(1))
+        .expect("el flush debe crear un segmento");
+
+    let plan = CompactionPlan::new(
+        vec![SegmentId::new(1), SegmentId::new(99)],
+        SegmentId::new(2),
+    )
+    .expect("la validez estructural del plan no depende del árbol");
+
+    assert_eq!(
+        tree.compact(plan),
+        Err(LsmTreeError::MissingSegment(SegmentId::new(99)))
+    );
+    assert_eq!(tree.segments().len(), 1);
+    assert_eq!(tree.segments()[0].segment_id(), SegmentId::new(1));
+}
+
+#[test]
+fn lsm_tree_compaction_rejects_existing_output_segment() {
+    let mut tree = LsmTree::new(4).expect("una capacidad positiva debe crear un LSM Tree");
+    tree.write(LsmKey::new(1), LsmValue::from("one"))
+        .expect("la escritura debe caber");
+    tree.flush_to_sstable(SegmentId::new(1))
+        .expect("el primer flush debe crear un segmento");
+    tree.write(LsmKey::new(2), LsmValue::from("two"))
+        .expect("la escritura debe caber");
+    tree.flush_to_sstable(SegmentId::new(2))
+        .expect("el segundo flush debe crear un segmento");
+
+    let plan = CompactionPlan::new(vec![SegmentId::new(1)], SegmentId::new(2))
+        .expect("el plan no conoce los segmentos existentes del árbol");
+
+    assert_eq!(
+        tree.compact(plan),
+        Err(LsmTreeError::OutputSegmentConflicts(SegmentId::new(2)))
+    );
+    assert_eq!(tree.segments().len(), 2);
+    assert_eq!(tree.segments()[0].segment_id(), SegmentId::new(1));
+    assert_eq!(tree.segments()[1].segment_id(), SegmentId::new(2));
+}
+
+#[test]
 fn sstable_declares_segment_identity_and_key_count() {
     let segment = SegmentId::new(7);
     let sstable = SSTable::new(segment, 128);

@@ -19,7 +19,7 @@ capítulo debe separar cuatro ideas:
 El issue #17 definió contratos pequeños para no reinventar vocabulario en cada
 paso. El issue #18 agregó escrituras en memoria. El issue #19 agregó flush de
 MemTable a SSTable. El issue #20 agrega búsqueda con precedencia explícita.
-Compaction real queda fuera de esta frontera.
+El issue #21 agrega compaction educativa entre segmentos existentes.
 
 ## Invariantes Iniciales
 
@@ -42,6 +42,34 @@ Compaction real queda fuera de esta frontera.
 - Un `CompactionPlan` necesita al menos un segmento de entrada.
 - Un `CompactionPlan` no acepta entradas duplicadas.
 - El segmento de salida de una compaction debe ser nuevo.
+- Una compaction rechaza entradas que no existen en el árbol.
+- Una compaction rechaza una salida que ya existe como segmento del árbol.
+- Una compaction conserva los segmentos que no participan en el plan.
+- Una compaction descarta versiones viejas de una clave cuando otro segmento
+  de entrada contiene una versión más reciente.
+- Una compaction produce una nueva `SSTable` ordenada por clave y la agrega
+  como el segmento más reciente.
+
+## Semántica De Compaction
+
+La compaction educativa modela una decisión central de las LSM Tree: muchas
+escrituras rápidas generan varios snapshots inmutables, y después el sistema
+reduce deuda de lectura fusionando segmentos.
+
+Durante el merge:
+
+- Se leen solo los segmentos indicados por `CompactionPlan`.
+- Para claves únicas, el par clave/valor se copia al segmento de salida.
+- Para claves repetidas, se conserva el valor del segmento más reciente dentro
+  del orden de creación del árbol.
+- Las versiones anteriores de esa misma clave se descartan porque ya no son la
+  versión visible para una búsqueda normal.
+- Los segmentos fuera del plan no se tocan, porque pertenecen a otra frontera
+  de compactación.
+
+Esta versión todavía no modela tombstones, niveles, tamaños de página ni
+políticas de selección de segmentos. Esas piezas pertenecen a pasos posteriores
+del capítulo; aquí la meta es fijar la invariante visible de representación.
 
 ## Relación Con B-Tree
 

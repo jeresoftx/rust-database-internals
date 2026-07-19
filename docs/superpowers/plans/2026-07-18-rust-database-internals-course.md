@@ -157,7 +157,7 @@ soluciones y benchmark educativo completos. No se marca como `reviewed` ni
 - [x] Modelar escrituras en memoria.
 - [x] Modelar flush a segmentos inmutables.
 - [x] Modelar búsqueda entre memtable y segmentos.
-- [ ] Modelar compaction educativa.
+- [x] Modelar compaction educativa.
 - [ ] Documentar tradeoffs frente a B-Tree.
 
 ## Task 3: Índices
