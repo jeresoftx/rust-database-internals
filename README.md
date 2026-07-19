@@ -36,7 +36,7 @@ pertenecen a la secuela propuesta `rust-database-systems`.
 
 | # | Capítulo | Módulo | Estado |
 |---|----------|--------|--------|
-| 01 | B-Tree | `src/btree.rs` | planned |
+| 01 | B-Tree | `src/btree.rs` | benchmarked |
 | 02 | LSM Tree | `src/lsm_tree.rs` | planned |
 | 03 | Índices | `src/indexes.rs` | planned |
 | 04 | Transacciones | `src/transactions.rs` | planned |
@@ -107,7 +107,7 @@ cargo test --doc
 Ejecutar benchmarks:
 
 ```bash
-cargo bench
+cargo bench --bench btree_bench
 ```
 
 ## Gobernanza
