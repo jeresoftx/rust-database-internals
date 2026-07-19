@@ -1,0 +1,16 @@
+flowchart LR
+    start["begin"] --> stage["staged changes"]
+    stage --> validate["validar invariantes"]
+    validate --> isolate["ocultar escrituras pendientes"]
+    isolate --> decision{"¿falla parcial?"}
+
+    decision -->|sí| rollback["rollback"]
+    rollback --> discarded["cambios descartados"]
+
+    decision -->|no| append["append commit"]
+    append --> visible["commit registrado"]
+    visible --> sync["sync"]
+    sync --> durable["commit durable"]
+
+    validate --> rejected["ConsistencyViolation"]
+    isolate --> conflict["PendingWriteConflict"]

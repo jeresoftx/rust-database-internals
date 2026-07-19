@@ -32,9 +32,11 @@ atomicidad y aislamiento, diagrama Mermaid, ejemplos progresivos, ejercicios,
 soluciones y benchmark manual. Su estado visible es `benchmarked`: tiene
 medición educativa, pero todavía no se marca como `reviewed` ni `published`.
 
-ACID está en estado `draft` con la documentación de Atomicity, Consistency,
-Isolation y Durability desde internals, más modelos Rust mínimos para cada
-propiedad. El siguiente paso agrega ejercicios de fallas parciales.
+ACID ya cuenta con documentación de Atomicity, Consistency, Isolation y
+Durability desde internals, modelos Rust mínimos por propiedad, ejercicios de
+fallas parciales, soluciones ejecutables, diagrama Mermaid y benchmark manual.
+Su estado visible es `benchmarked`: tiene medición educativa, pero todavía no
+se marca como `reviewed` ni `published`.
 
 El checklist detallado vive en
 [`docs/superpowers/plans/2026-07-18-rust-database-internals-course.md`](docs/superpowers/plans/2026-07-18-rust-database-internals-course.md).
@@ -47,7 +49,7 @@ El checklist detallado vive en
 | 02 | LSM Tree | draft |
 | 03 | Índices | benchmarked |
 | 04 | Transacciones | benchmarked |
-| 05 | ACID | draft |
+| 05 | ACID | benchmarked |
 | 06 | MVCC | planned |
 | 07 | Write-Ahead Log | planned |
 | 08 | Recovery | planned |

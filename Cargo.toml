@@ -49,6 +49,22 @@ path = "examples/soluciones/transactions_conflict.rs"
 name = "transactions_isolation"
 path = "examples/soluciones/transactions_isolation.rs"
 
+[[example]]
+name = "acid_atomicity_failure"
+path = "examples/soluciones/acid_atomicity_failure.rs"
+
+[[example]]
+name = "acid_consistency_failure"
+path = "examples/soluciones/acid_consistency_failure.rs"
+
+[[example]]
+name = "acid_isolation_failure"
+path = "examples/soluciones/acid_isolation_failure.rs"
+
+[[example]]
+name = "acid_durability_failure"
+path = "examples/soluciones/acid_durability_failure.rs"
+
 [[bench]]
 name = "btree_bench"
 path = "benches/btree_bench.rs"
@@ -62,4 +78,9 @@ harness = false
 [[bench]]
 name = "transactions_bench"
 path = "benches/transactions_bench.rs"
+harness = false
+
+[[bench]]
+name = "acid_bench"
+path = "benches/acid_bench.rs"
 harness = false
