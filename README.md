@@ -40,7 +40,7 @@ pertenecen a la secuela propuesta `rust-database-systems`.
 | 02 | LSM Tree | `src/lsm_tree.rs` | draft |
 | 03 | Índices | `src/indexes.rs` | benchmarked |
 | 04 | Transacciones | `src/transactions.rs` | benchmarked |
-| 05 | ACID | `src/acid.rs` | draft |
+| 05 | ACID | `src/acid.rs` | benchmarked |
 | 06 | MVCC | `src/mvcc.rs` | planned |
 | 07 | Write-Ahead Log | `src/wal.rs` | planned |
 | 08 | Recovery | `src/recovery.rs` | planned |
@@ -110,6 +110,7 @@ Ejecutar benchmarks:
 cargo bench --bench btree_bench
 cargo bench --bench indexes_bench
 cargo bench --bench transactions_bench
+cargo bench --bench acid_bench
 ```
 
 ## Gobernanza

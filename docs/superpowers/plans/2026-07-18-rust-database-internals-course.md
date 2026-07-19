@@ -86,7 +86,7 @@ Aplicación práctica:
 - [ ] Desarrollar capítulo 02: LSM Tree.
 - [ ] Desarrollar capítulo 03: Índices.
 - [x] Desarrollar capítulo 04: Transacciones.
-- [ ] Desarrollar capítulo 05: ACID.
+- [x] Desarrollar capítulo 05: ACID.
 - [ ] Desarrollar capítulo 06: MVCC.
 - [ ] Desarrollar capítulo 07: Write-Ahead Log.
 - [ ] Desarrollar capítulo 08: Recovery.
@@ -183,7 +183,11 @@ soluciones y benchmark educativo completos. No se marca como `reviewed` ni
 
 - [x] Documentar Atomicity, Consistency, Isolation y Durability.
 - [x] Crear modelos mínimos por propiedad.
-- [ ] Diseñar ejercicios de fallas parciales.
+- [x] Diseñar ejercicios de fallas parciales.
+- [x] Crear soluciones ejecutables de fallas parciales.
+- [x] Crear diagrama Mermaid de flujo ACID.
+- [x] Crear benchmark de rollback, constraints, aislamiento y durabilidad.
+- [x] Actualizar README y ROADMAP a `benchmarked`.
 
 ## Task 6: MVCC
 

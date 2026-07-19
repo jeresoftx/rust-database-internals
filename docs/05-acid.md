@@ -1,9 +1,10 @@
 # ACID
 
-> **Estado:** borrador técnico de propiedades.
+> **Estado:** benchmarked.
 > **Alcance actual:** Atomicity, Consistency, Isolation y Durability desde el
-> punto de vista de internals; modelos Rust mínimos para cada propiedad. Los
-> ejercicios de fallas parciales y benchmarks se agregan en pasos posteriores.
+> punto de vista de internals; modelos Rust mínimos para cada propiedad;
+> ejemplos, ejercicios de fallas parciales, soluciones, diagrama y benchmark
+> manual.
 
 ## Por Qué Existe
 
@@ -55,6 +56,20 @@ El módulo `src/acid.rs` contiene cuatro modelos mínimos:
 Estos modelos no reemplazan transacciones, MVCC ni WAL. Son laboratorios
 pequeños para sentir qué promete cada letra antes de construir mecanismos más
 realistas.
+
+## Ejemplos Progresivos
+
+Los ejemplos del capítulo viven en `examples/` y se pueden ejecutar con
+`cargo run --example <nombre>`.
+
+| Ejemplo | Propósito |
+|---------|-----------|
+| `acid_basic` | Confirmar varios cambios como una unidad atómica. |
+| `acid_intermediate` | Rechazar una inconsistencia por unicidad. |
+| `acid_advanced` | Combinar lectura confirmada y commit durable. |
+
+Estos ejemplos recorren las propiedades sin convertir el capítulo en WAL, MVCC
+o recovery completo.
 
 ## Atomicity
 
@@ -176,22 +191,113 @@ En `CommitLog`, `append_commit` registra un commit todavía no durable.
 `sync` separa la idea de "registrado en memoria del modelo" de "prometido como
 recuperable".
 
+## Ejercicios
+
+Los ejercicios están graduados para practicar fallas parciales pequeñas. Las
+soluciones ejecutables viven en `examples/soluciones/`.
+
+### Nivel 1: Falla Parcial Y Rollback
+
+Objetivo: observar que una unidad atómica descarta todo su trabajo tentativo
+cuando ocurre una falla antes de `commit`.
+
+Tareas:
+
+- crear un `AtomicUnit`;
+- preparar dos cambios con `stage`;
+- simular una falla antes de `commit`;
+- ejecutar `rollback`;
+- confirmar que no quedan cambios preparados ni confirmados.
+
+Solución: `cargo run --example acid_atomicity_failure`.
+
+### Nivel 2: Inconsistencia Evitada
+
+Objetivo: observar que una constraint evita publicar un estado inválido.
+
+Tareas:
+
+- crear `UniqueConstraint::new("customers.email")`;
+- insertar `ana@example.com`;
+- intentar insertar el mismo correo otra vez;
+- confirmar que el error es `AcidError::ConsistencyViolation`;
+- confirmar que la constraint solo conserva un valor.
+
+Solución: `cargo run --example acid_consistency_failure`.
+
+### Nivel 3: Aislamiento Ante Escritura Pendiente
+
+Objetivo: observar que una escritura pendiente no se vuelve visible y bloquea
+otro escritor incompatible.
+
+Tareas:
+
+- crear una `ReadCommittedCell` con `balance=100`;
+- preparar una escritura pendiente desde `OperationId(1)`;
+- confirmar que `read_committed` sigue devolviendo `balance=100`;
+- intentar escribir desde `OperationId(2)`;
+- confirmar `AcidError::PendingWriteConflict`;
+- ejecutar `rollback_pending` y permitir que el segundo escritor continúe.
+
+Solución: `cargo run --example acid_isolation_failure`.
+
+### Nivel 4: Durability Antes Y Después De Sync
+
+Objetivo: separar un commit registrado de un commit durable.
+
+Tareas:
+
+- crear un `CommitLog`;
+- llamar `append_commit`;
+- simular una falla antes de `sync`;
+- confirmar que `is_durable` devuelve `Some(false)`;
+- llamar `sync`;
+- confirmar que `is_durable` devuelve `Some(true)`.
+
+Solución: `cargo run --example acid_durability_failure`.
+
+## Benchmark Manual
+
+El benchmark educativo vive en `benches/acid_bench.rs` y se ejecuta con:
+
+```bash
+cargo bench --bench acid_bench
+```
+
+Mide cuatro operaciones pequeñas:
+
+- rollback de una falla parcial;
+- validación de unicidad;
+- lectura confirmada con escritura pendiente;
+- registro y sincronización de commits.
+
+El objetivo no es medir un motor ACID real. El objetivo es hacer visible que
+cada propiedad tiene un costo y una frontera de decisión distinta.
+
 ## Cómo Se Relacionan
 
 ACID se entiende mejor como un conjunto de tensiones, no como una lista
 aislada.
 
+El diagrama fuente vive en `diagrams/05-acid.mmd`.
+
 ```mermaid
 flowchart LR
-    tx["Transacción"] --> atomicity["Atomicity\nunidad completa"]
-    tx --> consistency["Consistency\ninvariantes"]
-    tx --> isolation["Isolation\nconcurrencia controlada"]
-    tx --> durability["Durability\ncommit recuperable"]
+    start["begin"] --> stage["staged changes"]
+    stage --> validate["validar invariantes"]
+    validate --> isolate["ocultar escrituras pendientes"]
+    isolate --> decision{"¿falla parcial?"}
 
-    atomicity --> wal["WAL / undo / redo"]
-    consistency --> constraints["constraints / índices / formatos"]
-    isolation --> mvcc["locks / MVCC / snapshots"]
-    durability --> recovery["fsync / checkpoints / recovery"]
+    decision -->|sí| rollback["rollback"]
+    rollback --> discarded["cambios descartados"]
+
+    decision -->|no| append["append commit"]
+    append --> visible["commit registrado"]
+    visible --> sync["sync"]
+    sync --> durable["commit durable"]
+
+    validate --> rejected["ConsistencyViolation"]
+    isolate --> conflict["PendingWriteConflict"]
 ```
 
 Una falla de atomicidad produce cambios a medias. Una falla de consistencia
@@ -212,6 +318,8 @@ ya había prometido conservar.
 - `UniqueConstraint` rechaza valores duplicados para preservar una invariante.
 - `ReadCommittedCell` oculta escrituras pendientes hasta que se confirman.
 - `CommitLog` no considera durable un commit hasta que se sincroniza.
+- Los ejercicios de falla parcial muestran rollback, inconsistencia evitada,
+  aislamiento de escritura pendiente y durabilidad posterior a `sync`.
 - Consistency se conecta con índices, constraints e invariantes de estructuras.
 - Durability se conecta con WAL, recovery y checkpoints.
 
@@ -219,11 +327,10 @@ ya había prometido conservar.
 
 Este capítulo todavía no implementa:
 
-- fallas parciales ejecutables;
 - WAL, redo, undo o recovery;
 - niveles formales de aislamiento;
 - integración con MVCC.
 
-La frontera es intencional. Ya existen modelos mínimos para sentir cada
-promesa; el siguiente paso agrega fallas parciales ejecutables para observar
-dónde se rompe cada una.
+La frontera es intencional. Los ejercicios muestran fallas parciales dentro de
+modelos mínimos; los capítulos de WAL, Recovery y MVCC explican mecanismos más
+realistas.
