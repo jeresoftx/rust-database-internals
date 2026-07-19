@@ -16,13 +16,18 @@ capítulo debe separar cuatro ideas:
 
 ## Frontera Actual
 
-Este paso no implementa escritura, búsqueda, flush ni compaction real. Solo
-define contratos pequeños que permitan escribir los siguientes tests sin
-reinventar vocabulario en cada issue.
+El issue #17 definió contratos pequeños para no reinventar vocabulario en cada
+paso. El issue #18 agrega escrituras en memoria. Búsqueda, flush y compaction
+real quedan fuera de esta frontera.
 
 ## Invariantes Iniciales
 
 - Una `MemTable` necesita capacidad positiva.
+- Una escritura nueva consume una posición de la `MemTable`.
+- Reescribir una clave existente reemplaza su valor sin crecer `len`.
+- Las entradas visibles de una `MemTable` se exponen en orden ascendente por
+  clave.
+- Una `MemTable` llena rechaza claves nuevas hasta que exista flush.
 - Una `SSTable` se identifica por `SegmentId`.
 - Una `SSTable` puede estar vacía como metadato educativo.
 - Un `CompactionPlan` necesita al menos un segmento de entrada.

@@ -1,5 +1,5 @@
 use rust_database_internals::lsm_tree::{
-    CompactionPlan, LsmTreeError, MemTable, SSTable, SegmentId,
+    CompactionPlan, LsmKey, LsmTreeError, LsmValue, MemTable, SSTable, SegmentId,
 };
 
 #[test]
@@ -17,6 +17,77 @@ fn memtable_rejects_zero_capacity() {
     assert_eq!(
         MemTable::new(0),
         Err(LsmTreeError::InvalidMemTableCapacity { max_entries: 0 })
+    );
+}
+
+#[test]
+fn memtable_writes_entries_in_key_order() {
+    let mut memtable = MemTable::new(4).expect("una capacidad positiva debe crear una MemTable");
+
+    assert_eq!(
+        memtable.write(LsmKey::new(30), LsmValue::from("thirty")),
+        Ok(())
+    );
+    assert_eq!(
+        memtable.write(LsmKey::new(10), LsmValue::from("ten")),
+        Ok(())
+    );
+    assert_eq!(
+        memtable.write(LsmKey::new(20), LsmValue::from("twenty")),
+        Ok(())
+    );
+
+    assert!(!memtable.is_empty());
+    assert_eq!(memtable.len(), 3);
+    assert!(memtable.can_accept_entry());
+    assert_eq!(
+        memtable.entries(),
+        vec![
+            (LsmKey::new(10), LsmValue::from("ten")),
+            (LsmKey::new(20), LsmValue::from("twenty")),
+            (LsmKey::new(30), LsmValue::from("thirty")),
+        ]
+    );
+}
+
+#[test]
+fn memtable_overwrites_existing_key_without_growing() {
+    let mut memtable = MemTable::new(1).expect("una capacidad positiva debe crear una MemTable");
+
+    assert_eq!(
+        memtable.write(LsmKey::new(7), LsmValue::from("first")),
+        Ok(())
+    );
+    assert_eq!(
+        memtable.write(LsmKey::new(7), LsmValue::from("second")),
+        Ok(())
+    );
+
+    assert_eq!(memtable.len(), 1);
+    assert!(!memtable.can_accept_entry());
+    assert_eq!(
+        memtable.entries(),
+        vec![(LsmKey::new(7), LsmValue::from("second"))]
+    );
+}
+
+#[test]
+fn memtable_rejects_new_key_when_full() {
+    let mut memtable = MemTable::new(1).expect("una capacidad positiva debe crear una MemTable");
+
+    assert_eq!(
+        memtable.write(LsmKey::new(1), LsmValue::from("one")),
+        Ok(())
+    );
+
+    assert_eq!(
+        memtable.write(LsmKey::new(2), LsmValue::from("two")),
+        Err(LsmTreeError::MemTableFull { max_entries: 1 })
+    );
+    assert_eq!(memtable.len(), 1);
+    assert_eq!(
+        memtable.entries(),
+        vec![(LsmKey::new(1), LsmValue::from("one"))]
     );
 }
 
