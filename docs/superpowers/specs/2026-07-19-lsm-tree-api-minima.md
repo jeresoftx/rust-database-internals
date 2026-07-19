@@ -19,7 +19,9 @@ capítulo debe separar cuatro ideas:
 El issue #17 definió contratos pequeños para no reinventar vocabulario en cada
 paso. El issue #18 agregó escrituras en memoria. El issue #19 agregó flush de
 MemTable a SSTable. El issue #20 agrega búsqueda con precedencia explícita.
-El issue #21 agrega compaction educativa entre segmentos existentes.
+El issue #21 agrega compaction educativa entre segmentos existentes. El issue
+#22 documenta los tradeoffs frente a B-Tree como primera lectura comparativa
+del capítulo.
 
 ## Invariantes Iniciales
 
