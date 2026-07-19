@@ -3,7 +3,8 @@
 > **Estado:** borrador técnico de ciclo de vida.
 > **Alcance actual:** `TransactionId`, `TransactionState`,
 > `TransactionManager`, registro explícito de estado inicial, `begin`, `commit`,
-> `rollback` y validación de transiciones.
+> `rollback`, validación de transiciones, `ResourceId` y locks exclusivos
+> educativos.
 
 ## Por Qué Existe
 
@@ -20,15 +21,16 @@ el vocabulario mínimo:
 - quién registra ese estado.
 
 Este capítulo empieza ahí. Las operaciones `begin`, `commit` y `rollback`
-modelan el ciclo mínimo. Los conflictos simples se dejan para el siguiente
-paso.
+modelan el ciclo mínimo. Los conflictos simples se representan con un lock
+exclusivo por recurso lógico.
 
 ## Modelo Actual Del Curso
 
-El modelo Rust actual define tres piezas:
+El modelo Rust actual define cuatro piezas:
 
 - `TransactionId`: identificador lógico de una transacción;
 - `TransactionState`: estado visible (`Active`, `Committed`, `RolledBack`);
+- `ResourceId`: recurso lógico protegido por una transacción;
 - `TransactionManager`: registro educativo de transacciones conocidas.
 
 `TransactionManager::new` crea un administrador vacío. El primer
@@ -39,6 +41,10 @@ identificador y permite consultar el estado asociado.
 `TransactionManager::commit` cierra una transacción activa en estado
 `Committed`. `TransactionManager::rollback` cierra una transacción activa en
 estado `RolledBack`.
+
+`TransactionManager::lock_exclusive` permite que una transacción activa reserve
+un `ResourceId`. Si otra transacción activa intenta reservar el mismo recurso,
+el administrador devuelve `TransactionError::ResourceConflict`.
 
 ## Estados
 
@@ -65,6 +71,26 @@ Si la transacción no existe, `commit` y `rollback` devuelven
 `TransactionError::UnknownTransaction`. Si la transacción existe, pero ya está
 cerrada, devuelven `TransactionError::InvalidStateTransition`.
 
+Al hacer `commit` o `rollback`, el administrador libera todos los locks que
+pertenecen a esa transacción. Así, otra transacción activa puede continuar el
+trabajo sobre el mismo recurso.
+
+## Conflictos Simples
+
+Un conflicto simple aparece cuando dos transacciones activas quieren el mismo
+recurso exclusivo al mismo tiempo.
+
+Ejemplo conceptual:
+
+1. `T1` abre una transacción.
+2. `T1` toma el recurso `accounts/42`.
+3. `T2` abre otra transacción.
+4. `T2` intenta tomar `accounts/42`.
+5. El administrador responde con `ResourceConflict`.
+
+Este modelo todavía no decide si `T2` debe esperar, abortar, reintentar o entrar
+a una cola. Solo nombra el conflicto y conserva quién mantiene el recurso.
+
 ## Diagrama Mental
 
 ```mermaid
@@ -75,10 +101,13 @@ flowchart LR
     id1 --> active["Active"]
     active --> commit["commit(1)"]
     active --> rollback["rollback(1)"]
+    active --> lock["lock_exclusive(accounts/42)"]
+    lock --> locks["locks[accounts/42] = TransactionId(1)"]
     commit --> committed["Committed"]
     rollback --> rolled_back["RolledBack"]
-    committed --> registry
-    rolled_back --> registry
+    committed --> release["liberar locks"]
+    rolled_back --> release
+    release --> registry
 ```
 
 ## Invariantes Del Modelo
@@ -92,11 +121,20 @@ flowchart LR
 - `commit` solo acepta transacciones activas.
 - `rollback` solo acepta transacciones activas.
 - `Committed` y `RolledBack` son estados terminales.
+- `ResourceId` rechaza nombres vacíos.
+- Una transacción activa puede tomar un lock exclusivo sobre un recurso libre.
+- Tomar dos veces el mismo recurso desde la misma transacción es idempotente.
+- Dos transacciones activas no pueden mantener el mismo recurso exclusivo.
+- `commit` y `rollback` liberan los locks de la transacción cerrada.
 - Consultar una transacción inexistente devuelve `None`.
 - Intentar cerrar una transacción inexistente devuelve
   `TransactionError::UnknownTransaction`.
 - Intentar cerrar una transacción terminal devuelve
   `TransactionError::InvalidStateTransition`.
+- Intentar operar con locks desde una transacción cerrada devuelve
+  `TransactionError::InactiveTransaction`.
+- Intentar tomar un recurso ocupado por otra transacción devuelve
+  `TransactionError::ResourceConflict`.
 - `TransactionState::as_str` devuelve un nombre estable para documentación y
   ejemplos.
 
@@ -104,10 +142,10 @@ flowchart LR
 
 Este modelo todavía no implementa:
 
-- conflictos entre transacciones;
-- locks;
+- locks compartidos;
+- espera, timeouts, deadlocks o detección de ciclos;
 - aislamiento;
 - WAL, recovery o durabilidad.
 
 La frontera es deliberada. Primero se nombra el sistema; después se agregan
-transiciones y reglas.
+propiedades transaccionales más fuertes.

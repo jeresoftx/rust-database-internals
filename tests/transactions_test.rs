@@ -1,5 +1,5 @@
 use rust_database_internals::transactions::{
-    TransactionError, TransactionId, TransactionManager, TransactionState,
+    ResourceId, TransactionError, TransactionId, TransactionManager, TransactionState,
 };
 
 #[test]
@@ -172,6 +172,158 @@ fn commit_rejects_transaction_that_is_already_rolled_back() {
             transaction_id,
             from: TransactionState::RolledBack,
             requested: TransactionState::Committed,
+        })
+    );
+}
+
+#[test]
+fn resource_id_rejects_blank_text() {
+    assert_eq!(
+        ResourceId::new("   "),
+        Err(TransactionError::InvalidResourceName)
+    );
+}
+
+#[test]
+fn resource_id_trims_and_exposes_stable_name() {
+    let resource = ResourceId::new(" accounts/42 ").expect("recurso válido");
+
+    assert_eq!(resource.as_str(), "accounts/42");
+}
+
+#[test]
+fn active_transaction_can_lock_resource_exclusively() {
+    let mut manager = TransactionManager::new();
+    let transaction_id = manager
+        .begin()
+        .expect("abrir una transacción debe producir un id");
+    let resource = ResourceId::new("accounts/42").expect("recurso válido");
+
+    manager
+        .lock_exclusive(transaction_id, resource.clone())
+        .expect("una transacción activa puede tomar un lock exclusivo");
+
+    assert_eq!(manager.lock_owner(&resource), Some(transaction_id));
+}
+
+#[test]
+fn same_transaction_can_lock_same_resource_more_than_once() {
+    let mut manager = TransactionManager::new();
+    let transaction_id = manager
+        .begin()
+        .expect("abrir una transacción debe producir un id");
+    let resource = ResourceId::new("accounts/42").expect("recurso válido");
+
+    manager
+        .lock_exclusive(transaction_id, resource.clone())
+        .expect("primer lock debe entrar");
+    manager
+        .lock_exclusive(transaction_id, resource.clone())
+        .expect("tomar el mismo lock debe ser idempotente");
+
+    assert_eq!(manager.lock_owner(&resource), Some(transaction_id));
+}
+
+#[test]
+fn second_active_transaction_conflicts_on_locked_resource() {
+    let mut manager = TransactionManager::new();
+    let holder = manager
+        .begin()
+        .expect("abrir la primera transacción debe producir un id");
+    let requester = manager
+        .begin()
+        .expect("abrir la segunda transacción debe producir un id");
+    let resource = ResourceId::new("accounts/42").expect("recurso válido");
+
+    manager
+        .lock_exclusive(holder, resource.clone())
+        .expect("la primera transacción toma el recurso");
+
+    assert_eq!(
+        manager.lock_exclusive(requester, resource.clone()),
+        Err(TransactionError::ResourceConflict {
+            resource: resource.clone(),
+            holder,
+            requester,
+        })
+    );
+    assert_eq!(manager.lock_owner(&resource), Some(holder));
+}
+
+#[test]
+fn commit_releases_locked_resources() {
+    let mut manager = TransactionManager::new();
+    let holder = manager
+        .begin()
+        .expect("abrir la primera transacción debe producir un id");
+    let requester = manager
+        .begin()
+        .expect("abrir la segunda transacción debe producir un id");
+    let resource = ResourceId::new("accounts/42").expect("recurso válido");
+
+    manager
+        .lock_exclusive(holder, resource.clone())
+        .expect("la primera transacción toma el recurso");
+    manager.commit(holder).expect("commit debe liberar locks");
+    manager
+        .lock_exclusive(requester, resource.clone())
+        .expect("otra transacción puede tomar el recurso liberado");
+
+    assert_eq!(manager.lock_owner(&resource), Some(requester));
+}
+
+#[test]
+fn rollback_releases_locked_resources() {
+    let mut manager = TransactionManager::new();
+    let holder = manager
+        .begin()
+        .expect("abrir la primera transacción debe producir un id");
+    let requester = manager
+        .begin()
+        .expect("abrir la segunda transacción debe producir un id");
+    let resource = ResourceId::new("accounts/42").expect("recurso válido");
+
+    manager
+        .lock_exclusive(holder, resource.clone())
+        .expect("la primera transacción toma el recurso");
+    manager
+        .rollback(holder)
+        .expect("rollback debe liberar locks");
+    manager
+        .lock_exclusive(requester, resource.clone())
+        .expect("otra transacción puede tomar el recurso liberado");
+
+    assert_eq!(manager.lock_owner(&resource), Some(requester));
+}
+
+#[test]
+fn lock_rejects_unknown_transaction() {
+    let mut manager = TransactionManager::new();
+    let unknown_transaction = TransactionId::new(404);
+    let resource = ResourceId::new("accounts/42").expect("recurso válido");
+
+    assert_eq!(
+        manager.lock_exclusive(unknown_transaction, resource),
+        Err(TransactionError::UnknownTransaction(unknown_transaction))
+    );
+}
+
+#[test]
+fn lock_rejects_closed_transaction() {
+    let mut manager = TransactionManager::new();
+    let transaction_id = manager
+        .begin()
+        .expect("abrir una transacción debe producir un id");
+    let resource = ResourceId::new("accounts/42").expect("recurso válido");
+    manager
+        .commit(transaction_id)
+        .expect("commit debe cerrar la transacción");
+
+    assert_eq!(
+        manager.lock_exclusive(transaction_id, resource),
+        Err(TransactionError::InactiveTransaction {
+            transaction_id,
+            state: TransactionState::Committed,
         })
     );
 }

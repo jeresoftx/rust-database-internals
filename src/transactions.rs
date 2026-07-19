@@ -1,9 +1,9 @@
 //! Modelo educativo inicial de transacciones.
 //!
-//! Este módulo fija el vocabulario y las transiciones mínimas. Una transacción
-//! tiene identidad (`TransactionId`), estado (`TransactionState`) y vive dentro
-//! de un `TransactionManager` que registra el ciclo de vida visible. Los
-//! conflictos simples quedan para pasos posteriores del capítulo.
+//! Este módulo fija el vocabulario, las transiciones mínimas y un modelo
+//! educativo de conflictos simples. Una transacción tiene identidad
+//! (`TransactionId`), estado (`TransactionState`) y vive dentro de un
+//! `TransactionManager` que registra el ciclo de vida visible.
 
 use std::collections::BTreeMap;
 
@@ -12,6 +12,7 @@ use std::collections::BTreeMap;
 pub struct TransactionManager {
     next_transaction_id: TransactionId,
     transactions: BTreeMap<TransactionId, TransactionState>,
+    locks: BTreeMap<ResourceId, TransactionId>,
 }
 
 impl TransactionManager {
@@ -20,6 +21,7 @@ impl TransactionManager {
         Self {
             next_transaction_id: TransactionId::new(1),
             transactions: BTreeMap::new(),
+            locks: BTreeMap::new(),
         }
     }
 
@@ -62,6 +64,35 @@ impl TransactionManager {
         self.transition(transaction_id, TransactionState::RolledBack)
     }
 
+    /// Intenta tomar un lock exclusivo sobre un recurso lógico.
+    pub fn lock_exclusive(
+        &mut self,
+        transaction_id: TransactionId,
+        resource: ResourceId,
+    ) -> Result<(), TransactionError> {
+        self.ensure_active_transaction(transaction_id)?;
+
+        if let Some(holder) = self.locks.get(&resource).copied() {
+            if holder == transaction_id {
+                return Ok(());
+            }
+
+            return Err(TransactionError::ResourceConflict {
+                resource,
+                holder,
+                requester: transaction_id,
+            });
+        }
+
+        self.locks.insert(resource, transaction_id);
+        Ok(())
+    }
+
+    /// Devuelve la transacción que mantiene el lock de un recurso.
+    pub fn lock_owner(&self, resource: &ResourceId) -> Option<TransactionId> {
+        self.locks.get(resource).copied()
+    }
+
     /// Devuelve el estado de una transacción conocida.
     pub fn state(&self, transaction_id: TransactionId) -> Option<TransactionState> {
         self.transactions.get(&transaction_id).copied()
@@ -86,7 +117,26 @@ impl TransactionManager {
         }
 
         *state = requested;
+        self.release_locks(transaction_id);
         Ok(())
+    }
+
+    fn ensure_active_transaction(
+        &self,
+        transaction_id: TransactionId,
+    ) -> Result<(), TransactionError> {
+        match self.transactions.get(&transaction_id).copied() {
+            Some(TransactionState::Active) => Ok(()),
+            Some(state) => Err(TransactionError::InactiveTransaction {
+                transaction_id,
+                state,
+            }),
+            None => Err(TransactionError::UnknownTransaction(transaction_id)),
+        }
+    }
+
+    fn release_locks(&mut self, transaction_id: TransactionId) {
+        self.locks.retain(|_, holder| *holder != transaction_id);
     }
 }
 
@@ -113,6 +163,29 @@ impl TransactionId {
 
     const fn next(self) -> Self {
         Self(self.0 + 1)
+    }
+}
+
+/// Recurso lógico protegido por una transacción.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct ResourceId(String);
+
+impl ResourceId {
+    /// Crea un recurso lógico para el modelo de locks educativos.
+    pub fn new(value: impl Into<String>) -> Result<Self, TransactionError> {
+        let value = value.into();
+        let value = value.trim().to_owned();
+
+        if value.is_empty() {
+            return Err(TransactionError::InvalidResourceName);
+        }
+
+        Ok(Self(value))
+    }
+
+    /// Devuelve el nombre estable del recurso.
+    pub fn as_str(&self) -> &str {
+        &self.0
     }
 }
 
@@ -143,6 +216,8 @@ impl TransactionState {
 pub enum TransactionError {
     /// Una transacción buscada no existe en el administrador.
     UnknownTransaction(TransactionId),
+    /// El nombre de un recurso lógico está vacío.
+    InvalidResourceName,
     /// Una transacción conocida recibió una transición no permitida.
     InvalidStateTransition {
         /// Transacción que recibió la transición.
@@ -151,6 +226,22 @@ pub enum TransactionError {
         from: TransactionState,
         /// Estado terminal solicitado.
         requested: TransactionState,
+    },
+    /// Una operación requiere una transacción activa, pero ya estaba cerrada.
+    InactiveTransaction {
+        /// Transacción que intentó operar.
+        transaction_id: TransactionId,
+        /// Estado actual de la transacción.
+        state: TransactionState,
+    },
+    /// Dos transacciones activas intentaron tomar el mismo recurso exclusivo.
+    ResourceConflict {
+        /// Recurso lógico en disputa.
+        resource: ResourceId,
+        /// Transacción que conserva el recurso.
+        holder: TransactionId,
+        /// Transacción que intentó tomarlo.
+        requester: TransactionId,
     },
     /// Una invariante interna fue violada.
     InvariantViolation(&'static str),
