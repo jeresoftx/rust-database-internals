@@ -40,7 +40,7 @@ pertenecen a la secuela propuesta `rust-database-systems`.
 | 02 | LSM Tree | `src/lsm_tree.rs` | draft |
 | 03 | Índices | `src/indexes.rs` | benchmarked |
 | 04 | Transacciones | `src/transactions.rs` | benchmarked |
-| 05 | ACID | `src/acid.rs` | planned |
+| 05 | ACID | `docs/05-acid.md` | draft |
 | 06 | MVCC | `src/mvcc.rs` | planned |
 | 07 | Write-Ahead Log | `src/wal.rs` | planned |
 | 08 | Recovery | `src/recovery.rs` | planned |
