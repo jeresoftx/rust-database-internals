@@ -11,6 +11,7 @@
 //! resuelven.
 
 pub mod btree;
+pub mod indexes;
 pub mod lsm_tree;
 
 /// Devuelve el nombre canónico del curso.
