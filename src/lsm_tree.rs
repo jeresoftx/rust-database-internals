@@ -4,16 +4,16 @@
 //! que sostienen el mecanismo. Una LSM Tree escribe primero en memoria
 //! (`MemTable`), congela esa memoria en segmentos ordenados e inmutables
 //! (`SSTable`) y compacta varios segmentos en uno nuevo (`CompactionPlan`).
-//! Las operaciones de escritura, búsqueda, flush y compaction quedan para
-//! pasos posteriores del capítulo.
+//! El modelo actual ya acepta escrituras en memoria; búsqueda, flush y
+//! compaction quedan para pasos posteriores del capítulo.
 
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 
 /// Tabla mutable en memoria donde aterrizan las escrituras recientes.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MemTable {
     max_entries: usize,
-    len: usize,
+    entries: BTreeMap<LsmKey, LsmValue>,
 }
 
 impl MemTable {
@@ -25,18 +25,18 @@ impl MemTable {
 
         Ok(Self {
             max_entries,
-            len: 0,
+            entries: BTreeMap::new(),
         })
     }
 
     /// Devuelve `true` cuando la MemTable no contiene entradas.
     pub fn is_empty(&self) -> bool {
-        self.len == 0
+        self.entries.is_empty()
     }
 
     /// Devuelve cuántas entradas contiene la MemTable.
     pub fn len(&self) -> usize {
-        self.len
+        self.entries.len()
     }
 
     /// Capacidad máxima de entradas antes de requerir flush.
@@ -46,7 +46,69 @@ impl MemTable {
 
     /// Devuelve `true` cuando todavía cabe una entrada más.
     pub fn can_accept_entry(&self) -> bool {
-        self.len < self.max_entries
+        self.len() < self.max_entries
+    }
+
+    /// Escribe o reemplaza una clave dentro de la MemTable.
+    ///
+    /// Reemplazar una clave existente no consume capacidad adicional. Escribir
+    /// una clave nueva cuando la MemTable está llena devuelve un error para
+    /// que el siguiente paso del capítulo pueda modelar flush explícitamente.
+    pub fn write(&mut self, key: LsmKey, value: LsmValue) -> Result<(), LsmTreeError> {
+        if !self.entries.contains_key(&key) && !self.can_accept_entry() {
+            return Err(LsmTreeError::MemTableFull {
+                max_entries: self.max_entries,
+            });
+        }
+
+        self.entries.insert(key, value);
+        Ok(())
+    }
+
+    /// Devuelve las entradas actuales en orden ascendente por clave.
+    pub fn entries(&self) -> Vec<(LsmKey, LsmValue)> {
+        self.entries
+            .iter()
+            .map(|(key, value)| (*key, value.clone()))
+            .collect()
+    }
+}
+
+/// Clave comparable de una MemTable o SSTable educativa.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct LsmKey(u64);
+
+impl LsmKey {
+    /// Crea una clave numérica para el modelo LSM.
+    pub const fn new(value: u64) -> Self {
+        Self(value)
+    }
+
+    /// Devuelve el valor numérico de la clave.
+    pub const fn value(self) -> u64 {
+        self.0
+    }
+}
+
+/// Valor almacenado por una escritura en memoria.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LsmValue(Vec<u8>);
+
+impl LsmValue {
+    /// Crea un valor desde bytes.
+    pub fn new(bytes: Vec<u8>) -> Self {
+        Self(bytes)
+    }
+
+    /// Devuelve los bytes del valor.
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl From<&str> for LsmValue {
+    fn from(value: &str) -> Self {
+        Self(value.as_bytes().to_vec())
     }
 }
 
