@@ -12,3 +12,15 @@ name = "rust_database_internals"
 path = "src/lib.rs"
 
 [dependencies]
+
+[[example]]
+name = "btree_search"
+path = "examples/soluciones/btree_search.rs"
+
+[[example]]
+name = "btree_insert"
+path = "examples/soluciones/btree_insert.rs"
+
+[[example]]
+name = "btree_split"
+path = "examples/soluciones/btree_split.rs"
