@@ -191,7 +191,7 @@ soluciones y benchmark educativo completos. No se marca como `reviewed` ni
 
 ## Task 6: MVCC
 
-- [ ] Diseñar versiones de registro.
+- [x] Diseñar versiones de registro.
 - [ ] Modelar snapshot reads.
 - [ ] Modelar visibilidad por timestamp lógico.
 - [ ] Documentar relación con PostgreSQL como comparación.
