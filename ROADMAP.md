@@ -38,6 +38,11 @@ fallas parciales, soluciones ejecutables, diagrama Mermaid y benchmark manual.
 Su estado visible es `benchmarked`: tiene medición educativa, pero todavía no
 se marca como `reviewed` ni `published`.
 
+MVCC ya cuenta con representación inicial de versiones de registro, timestamps
+lógicos y metadatos de visibilidad. Su estado visible es `draft`: el modelo de
+historia existe, pero todavía faltan snapshot reads, reglas completas de
+visibilidad por timestamp y comparación con PostgreSQL.
+
 El checklist detallado vive en
 [`docs/superpowers/plans/2026-07-18-rust-database-internals-course.md`](docs/superpowers/plans/2026-07-18-rust-database-internals-course.md).
 
@@ -50,7 +55,7 @@ El checklist detallado vive en
 | 03 | Índices | benchmarked |
 | 04 | Transacciones | benchmarked |
 | 05 | ACID | benchmarked |
-| 06 | MVCC | planned |
+| 06 | MVCC | draft |
 | 07 | Write-Ahead Log | planned |
 | 08 | Recovery | planned |
 | 09 | Replicación | planned |

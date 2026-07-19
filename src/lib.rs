@@ -14,6 +14,7 @@ pub mod acid;
 pub mod btree;
 pub mod indexes;
 pub mod lsm_tree;
+pub mod mvcc;
 pub mod transactions;
 
 /// Devuelve el nombre canónico del curso.
