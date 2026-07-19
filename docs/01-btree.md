@@ -235,6 +235,33 @@ En el modelo actual, la complejidad todavía es deliberadamente pequeña:
 grande porque una página puede contener muchas claves. Por eso reducir altura
 es más importante que eliminar cada desplazamiento local.
 
+## Benchmark Educativo
+
+El benchmark del capítulo vive en `benches/btree_bench.rs` y se ejecuta con:
+
+```bash
+cargo bench --bench btree_bench
+```
+
+La salida imprime una tabla con tres mediciones:
+
+- inserción secuencial mientras la raíz sigue siendo hoja;
+- búsqueda de claves existentes después del primer split de raíz;
+- búsqueda de claves ausentes después del primer split de raíz.
+
+Este benchmark no intenta producir números publicables. Usa `std::time::Instant`
+y repeticiones simples para conectar el análisis de complejidad con una
+medición local. El valor importante no es comparar máquinas, sino observar qué
+operación se está midiendo, cuántas operaciones se ejecutaron y qué
+representación interna estaba activa.
+
+Reglas de lectura:
+
+- ejecutar varias veces antes de sacar conclusiones;
+- comparar tendencias, no nanosegundos absolutos;
+- recordar que el modelo actual solo cubre raíz hoja y primer split;
+- no confundir este benchmark educativo con benchmarking estadístico formal.
+
 ## Modos De Falla
 
 El modelo no debe fallar con pánico en casos esperados. Los errores forman parte
