@@ -10,6 +10,7 @@
 //! documentados para entender por qué esos motores existen y qué problemas
 //! resuelven.
 
+pub mod acid;
 pub mod btree;
 pub mod indexes;
 pub mod lsm_tree;

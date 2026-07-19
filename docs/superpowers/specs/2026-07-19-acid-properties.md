@@ -1,15 +1,15 @@
 # Especificación: Propiedades ACID
 
-> **Issue:** #31
+> **Issues:** #31, #32
 > **Milestone:** 05 ACID
-> **Estado:** borrador documental.
+> **Estado:** borrador técnico con modelos mínimos.
 
 ## Propósito
 
-El primer paso del capítulo ACID documenta Atomicity, Consistency, Isolation y
-Durability desde internals. No implementa todavía modelos Rust ni simulaciones
-de fallas parciales; fija el vocabulario para que esos modelos no mezclen
-promesas con mecanismos.
+El capítulo ACID documenta Atomicity, Consistency, Isolation y Durability desde
+internals y agrega modelos Rust mínimos para cada propiedad. Todavía no
+implementa simulaciones de fallas parciales; fija el vocabulario para que esos
+ejercicios no mezclen promesas con mecanismos.
 
 ## Alcance Actual
 
@@ -18,12 +18,21 @@ promesas con mecanismos.
 - Consistency se relaciona con invariantes, constraints e índices.
 - Isolation se relaciona con locks, conflictos y MVCC futuro.
 - Durability se relaciona con WAL, fsync, checkpoints y recovery.
+- `src/acid.rs` expone `AcidProperty`, `AtomicUnit`, `UniqueConstraint`,
+  `ReadCommittedCell` y `CommitLog`.
+- `tests/acid_test.rs` cubre las invariantes mínimas por propiedad.
 - README y ROADMAP muestran ACID como capítulo en estado `draft`.
 - El checklist del plan marca completada la documentación de propiedades.
+- El checklist del plan marca completados los modelos mínimos por propiedad.
 
 ## Decisión De Diseño
 
-ACID se documenta antes de modelarse porque sus propiedades son promesas del
-motor, no estructuras de datos aisladas. El siguiente paso puede crear modelos
-mínimos por propiedad sin cambiar la narrativa: cada modelo debe enseñar una
-forma concreta de defender o romper una promesa.
+ACID se documentó antes de modelarse porque sus propiedades son promesas del
+motor, no estructuras de datos aisladas. Los modelos mínimos se agregan sin
+cambiar esa narrativa: cada modelo enseña una forma concreta de defender o
+romper una promesa.
+
+Los modelos mínimos evitan implementar WAL, MVCC o recovery real. `AtomicUnit`
+enseña cierre todo-o-nada, `UniqueConstraint` enseña defensa de invariantes,
+`ReadCommittedCell` enseña visibilidad de valor confirmado y `CommitLog` enseña
+la diferencia entre registrar y sincronizar un commit.
