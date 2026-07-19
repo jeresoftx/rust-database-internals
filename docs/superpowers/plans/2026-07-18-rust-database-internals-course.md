@@ -163,7 +163,7 @@ soluciones y benchmark educativo completos. No se marca como `reviewed` ni
 ## Task 3: Índices
 
 - [x] Diseñar índices primarios y secundarios.
-- [ ] Modelar índice único y no único.
+- [x] Modelar índice único y no único.
 - [ ] Modelar selectividad.
 - [ ] Documentar costo de lectura, escritura y mantenimiento.
 
