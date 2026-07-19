@@ -25,6 +25,10 @@ unicidad, selectividad, documentación de costos, ejemplos progresivos,
 ejercicios y benchmark manual. Su estado visible es `benchmarked`: tiene
 medición educativa, pero todavía no se marca como `reviewed` ni `published`.
 
+Transacciones inicia su estado `draft` con identidad, estado y administrador
+educativo. Los siguientes pasos agregan `begin`, `commit`, `rollback`,
+conflictos simples y documentación de atomicidad e aislamiento.
+
 El checklist detallado vive en
 [`docs/superpowers/plans/2026-07-18-rust-database-internals-course.md`](docs/superpowers/plans/2026-07-18-rust-database-internals-course.md).
 
@@ -35,7 +39,7 @@ El checklist detallado vive en
 | 01 | B-Tree | benchmarked |
 | 02 | LSM Tree | draft |
 | 03 | Índices | benchmarked |
-| 04 | Transacciones | planned |
+| 04 | Transacciones | draft |
 | 05 | ACID | planned |
 | 06 | MVCC | planned |
 | 07 | Write-Ahead Log | planned |

@@ -39,7 +39,7 @@ pertenecen a la secuela propuesta `rust-database-systems`.
 | 01 | B-Tree | `src/btree.rs` | benchmarked |
 | 02 | LSM Tree | `src/lsm_tree.rs` | draft |
 | 03 | Índices | `src/indexes.rs` | benchmarked |
-| 04 | Transacciones | `src/transactions.rs` | planned |
+| 04 | Transacciones | `src/transactions.rs` | draft |
 | 05 | ACID | `src/acid.rs` | planned |
 | 06 | MVCC | `src/mvcc.rs` | planned |
 | 07 | Write-Ahead Log | `src/wal.rs` | planned |

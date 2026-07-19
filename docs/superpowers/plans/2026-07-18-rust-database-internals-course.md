@@ -169,7 +169,7 @@ soluciones y benchmark educativo completos. No se marca como `reviewed` ni
 
 ## Task 4: Transacciones
 
-- [ ] Diseñar `TransactionId`, `TransactionState`, `TransactionManager`.
+- [x] Diseñar `TransactionId`, `TransactionState`, `TransactionManager`.
 - [ ] Modelar begin, commit y rollback.
 - [ ] Modelar conflictos simples.
 - [ ] Documentar atomicidad y aislamiento.
