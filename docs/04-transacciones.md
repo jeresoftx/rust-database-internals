@@ -1,9 +1,9 @@
 # Transacciones
 
-> **Estado:** borrador técnico de representación.
+> **Estado:** borrador técnico de ciclo de vida.
 > **Alcance actual:** `TransactionId`, `TransactionState`,
-> `TransactionManager`, registro explícito de estado inicial y consulta de
-> estado.
+> `TransactionManager`, registro explícito de estado inicial, `begin`, `commit`,
+> `rollback` y validación de transiciones.
 
 ## Por Qué Existe
 
@@ -19,8 +19,9 @@ el vocabulario mínimo:
 - en qué estado está;
 - quién registra ese estado.
 
-Este capítulo empieza ahí. Las operaciones `begin`, `commit`, `rollback` y los
-conflictos simples se modelan en los siguientes pasos.
+Este capítulo empieza ahí. Las operaciones `begin`, `commit` y `rollback`
+modelan el ciclo mínimo. Los conflictos simples se dejan para el siguiente
+paso.
 
 ## Modelo Actual Del Curso
 
@@ -34,6 +35,11 @@ El modelo Rust actual define tres piezas:
 `TransactionId` disponible es `1`. Registrar una transacción avanza el siguiente
 identificador y permite consultar el estado asociado.
 
+`TransactionManager::begin` abre una transacción en estado `Active`.
+`TransactionManager::commit` cierra una transacción activa en estado
+`Committed`. `TransactionManager::rollback` cierra una transacción activa en
+estado `RolledBack`.
+
 ## Estados
 
 Los estados actuales nombran el ciclo de vida mínimo:
@@ -44,9 +50,20 @@ Los estados actuales nombran el ciclo de vida mínimo:
 | `Committed` | La transacción terminó aceptando sus cambios. |
 | `RolledBack` | La transacción terminó descartando sus cambios. |
 
-Este primer paso todavía no cambia estados automáticamente. La transición entre
-ellos pertenece al siguiente issue, donde se modelan `begin`, `commit` y
-`rollback`.
+`Committed` y `RolledBack` son estados terminales. Una vez que una transacción
+termina, no puede volver a cerrarse ni regresar a `Active`.
+
+## Transiciones
+
+| Operación | Estado inicial permitido | Estado final |
+|-----------|--------------------------|--------------|
+| `begin` | no aplica | `Active` |
+| `commit` | `Active` | `Committed` |
+| `rollback` | `Active` | `RolledBack` |
+
+Si la transacción no existe, `commit` y `rollback` devuelven
+`TransactionError::UnknownTransaction`. Si la transacción existe, pero ya está
+cerrada, devuelven `TransactionError::InvalidStateTransition`.
 
 ## Diagrama Mental
 
@@ -54,9 +71,14 @@ ellos pertenece al siguiente issue, donde se modelan `begin`, `commit` y
 flowchart LR
     manager["TransactionManager"] --> next["next_transaction_id = 1"]
     manager --> registry["registro de estados"]
-    register["register(Active)"] --> id1["TransactionId(1)"]
-    id1 --> registry
-    registry --> state["state(1) = Active"]
+    begin["begin()"] --> id1["TransactionId(1)"]
+    id1 --> active["Active"]
+    active --> commit["commit(1)"]
+    active --> rollback["rollback(1)"]
+    commit --> committed["Committed"]
+    rollback --> rolled_back["RolledBack"]
+    committed --> registry
+    rolled_back --> registry
 ```
 
 ## Invariantes Del Modelo
@@ -66,7 +88,15 @@ flowchart LR
 - El primer identificador disponible es `TransactionId(1)`.
 - Registrar una transacción devuelve el identificador asignado.
 - Registrar una transacción incrementa el siguiente identificador.
+- `begin` registra una transacción activa.
+- `commit` solo acepta transacciones activas.
+- `rollback` solo acepta transacciones activas.
+- `Committed` y `RolledBack` son estados terminales.
 - Consultar una transacción inexistente devuelve `None`.
+- Intentar cerrar una transacción inexistente devuelve
+  `TransactionError::UnknownTransaction`.
+- Intentar cerrar una transacción terminal devuelve
+  `TransactionError::InvalidStateTransition`.
 - `TransactionState::as_str` devuelve un nombre estable para documentación y
   ejemplos.
 
@@ -74,10 +104,6 @@ flowchart LR
 
 Este modelo todavía no implementa:
 
-- `begin`;
-- `commit`;
-- `rollback`;
-- cambios de estado validados;
 - conflictos entre transacciones;
 - locks;
 - aislamiento;

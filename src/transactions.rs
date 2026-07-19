@@ -1,10 +1,9 @@
 //! Modelo educativo inicial de transacciones.
 //!
-//! Este módulo fija el vocabulario antes de modelar operaciones. Una
-//! transacción tiene identidad (`TransactionId`), estado (`TransactionState`) y
-//! vive dentro de un `TransactionManager` que registra el ciclo de vida visible.
-//! `begin`, `commit`, `rollback` y conflictos simples quedan para pasos
-//! posteriores del capítulo.
+//! Este módulo fija el vocabulario y las transiciones mínimas. Una transacción
+//! tiene identidad (`TransactionId`), estado (`TransactionState`) y vive dentro
+//! de un `TransactionManager` que registra el ciclo de vida visible. Los
+//! conflictos simples quedan para pasos posteriores del capítulo.
 
 use std::collections::BTreeMap;
 
@@ -48,9 +47,46 @@ impl TransactionManager {
         Ok(transaction_id)
     }
 
+    /// Abre una transacción nueva en estado activo.
+    pub fn begin(&mut self) -> Result<TransactionId, TransactionError> {
+        self.register(TransactionState::Active)
+    }
+
+    /// Cierra una transacción activa aceptando sus cambios.
+    pub fn commit(&mut self, transaction_id: TransactionId) -> Result<(), TransactionError> {
+        self.transition(transaction_id, TransactionState::Committed)
+    }
+
+    /// Cierra una transacción activa descartando sus cambios.
+    pub fn rollback(&mut self, transaction_id: TransactionId) -> Result<(), TransactionError> {
+        self.transition(transaction_id, TransactionState::RolledBack)
+    }
+
     /// Devuelve el estado de una transacción conocida.
     pub fn state(&self, transaction_id: TransactionId) -> Option<TransactionState> {
         self.transactions.get(&transaction_id).copied()
+    }
+
+    fn transition(
+        &mut self,
+        transaction_id: TransactionId,
+        requested: TransactionState,
+    ) -> Result<(), TransactionError> {
+        let state = self
+            .transactions
+            .get_mut(&transaction_id)
+            .ok_or(TransactionError::UnknownTransaction(transaction_id))?;
+
+        if *state != TransactionState::Active {
+            return Err(TransactionError::InvalidStateTransition {
+                transaction_id,
+                from: *state,
+                requested,
+            });
+        }
+
+        *state = requested;
+        Ok(())
     }
 }
 
@@ -107,6 +143,15 @@ impl TransactionState {
 pub enum TransactionError {
     /// Una transacción buscada no existe en el administrador.
     UnknownTransaction(TransactionId),
+    /// Una transacción conocida recibió una transición no permitida.
+    InvalidStateTransition {
+        /// Transacción que recibió la transición.
+        transaction_id: TransactionId,
+        /// Estado actual de la transacción.
+        from: TransactionState,
+        /// Estado terminal solicitado.
+        requested: TransactionState,
+    },
     /// Una invariante interna fue violada.
     InvariantViolation(&'static str),
 }

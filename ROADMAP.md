@@ -25,9 +25,10 @@ unicidad, selectividad, documentación de costos, ejemplos progresivos,
 ejercicios y benchmark manual. Su estado visible es `benchmarked`: tiene
 medición educativa, pero todavía no se marca como `reviewed` ni `published`.
 
-Transacciones inicia su estado `draft` con identidad, estado y administrador
-educativo. Los siguientes pasos agregan `begin`, `commit`, `rollback`,
-conflictos simples y documentación de atomicidad e aislamiento.
+Transacciones está en estado `draft` con identidad, estado, administrador
+educativo y ciclo de vida mínimo mediante `begin`, `commit` y `rollback`. Los
+siguientes pasos agregan conflictos simples y documentación de atomicidad e
+aislamiento.
 
 El checklist detallado vive en
 [`docs/superpowers/plans/2026-07-18-rust-database-internals-course.md`](docs/superpowers/plans/2026-07-18-rust-database-internals-course.md).
