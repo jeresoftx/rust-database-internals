@@ -1,9 +1,9 @@
 //! Representación educativa inicial de MVCC.
 //!
-//! Este módulo modela versiones de registro y metadatos de visibilidad sin
-//! implementar todavía lecturas por snapshot. La meta es fijar el vocabulario:
-//! un registro lógico puede tener varias versiones, cada versión nace en un
-//! timestamp lógico y puede quedar cerrada por un borrado lógico posterior.
+//! Este módulo modela versiones de registro, metadatos de visibilidad y
+//! lecturas por snapshot. La meta es fijar el vocabulario: un registro lógico
+//! puede tener varias versiones, cada versión nace en un timestamp lógico y
+//! una lectura observa la versión visible para su snapshot.
 
 /// Cadena de versiones para un mismo registro lógico.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -48,6 +48,14 @@ impl VersionChain {
         self.versions.last()
     }
 
+    /// Lee la versión visible para un snapshot.
+    pub fn read(&self, snapshot: &Snapshot) -> Option<&RecordVersion> {
+        self.versions
+            .iter()
+            .rev()
+            .find(|version| version.is_visible_in(snapshot))
+    }
+
     /// Agrega una nueva versión con timestamp lógico monótono.
     pub fn append(
         &mut self,
@@ -70,6 +78,16 @@ impl VersionChain {
         self.next_version_id = version_id.next();
 
         Ok(version_id)
+    }
+
+    /// Cierra lógicamente la versión más reciente de la cadena.
+    pub fn delete_latest_at(&mut self, deleted_at: LogicalTimestamp) -> Result<(), MvccError> {
+        let latest = self
+            .versions
+            .last_mut()
+            .ok_or(MvccError::EmptyVersionChain)?;
+
+        latest.delete_at(deleted_at)
     }
 }
 
@@ -153,6 +171,24 @@ impl LogicalTimestamp {
     }
 }
 
+/// Snapshot lógico usado por una lectura MVCC.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Snapshot {
+    read_at: LogicalTimestamp,
+}
+
+impl Snapshot {
+    /// Crea un snapshot para un timestamp lógico de lectura.
+    pub const fn new(read_at: LogicalTimestamp) -> Self {
+        Self { read_at }
+    }
+
+    /// Timestamp lógico que delimita qué versiones puede observar la lectura.
+    pub const fn read_at(self) -> LogicalTimestamp {
+        self.read_at
+    }
+}
+
 /// Versión concreta de un registro lógico.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RecordVersion {
@@ -210,6 +246,14 @@ impl RecordVersion {
         self.deleted_at.is_some()
     }
 
+    /// Devuelve `true` cuando esta versión es visible para el snapshot.
+    pub fn is_visible_in(&self, snapshot: &Snapshot) -> bool {
+        self.created_at <= snapshot.read_at()
+            && self
+                .deleted_at
+                .is_none_or(|deleted_at| snapshot.read_at() < deleted_at)
+    }
+
     /// Marca la versión como borrada en un timestamp lógico posterior o igual.
     pub fn delete_at(&mut self, deleted_at: LogicalTimestamp) -> Result<(), MvccError> {
         if self.deleted_at.is_some() {
@@ -256,6 +300,8 @@ pub enum MvccError {
         /// Timestamp solicitado para la nueva versión.
         next: LogicalTimestamp,
     },
+    /// La cadena no tiene versiones que cerrar.
+    EmptyVersionChain,
 }
 
 fn normalize(value: String) -> String {
