@@ -1,5 +1,5 @@
 use rust_database_internals::lsm_tree::{
-    CompactionPlan, LsmKey, LsmTreeError, LsmValue, MemTable, SSTable, SegmentId,
+    CompactionPlan, LsmKey, LsmTree, LsmTreeError, LsmValue, MemTable, SSTable, SegmentId,
 };
 
 #[test]
@@ -150,6 +150,46 @@ fn flushed_sstable_is_not_changed_by_later_memtable_writes() {
         memtable.entries(),
         vec![(LsmKey::new(1), LsmValue::from("after"))]
     );
+}
+
+#[test]
+fn lsm_tree_searches_memtable_before_segments() {
+    let mut tree = LsmTree::new(4).expect("una capacidad positiva debe crear un LSM Tree");
+    tree.write(LsmKey::new(1), LsmValue::from("older"))
+        .expect("la escritura debe caber");
+    tree.flush_to_sstable(SegmentId::new(1))
+        .expect("el flush debe crear un segmento");
+    tree.write(LsmKey::new(1), LsmValue::from("newer"))
+        .expect("la escritura en memoria debe caber");
+
+    assert_eq!(tree.search(LsmKey::new(1)), Some(LsmValue::from("newer")));
+}
+
+#[test]
+fn lsm_tree_searches_newest_sstable_before_older_segments() {
+    let mut tree = LsmTree::new(4).expect("una capacidad positiva debe crear un LSM Tree");
+    tree.write(LsmKey::new(5), LsmValue::from("old"))
+        .expect("la escritura debe caber");
+    tree.flush_to_sstable(SegmentId::new(1))
+        .expect("el flush debe crear un segmento");
+    tree.write(LsmKey::new(5), LsmValue::from("new"))
+        .expect("la escritura debe caber");
+    tree.flush_to_sstable(SegmentId::new(2))
+        .expect("el flush debe crear un segmento");
+
+    assert_eq!(tree.search(LsmKey::new(5)), Some(LsmValue::from("new")));
+    assert_eq!(tree.segments().len(), 2);
+}
+
+#[test]
+fn lsm_tree_search_returns_none_when_key_is_absent() {
+    let mut tree = LsmTree::new(4).expect("una capacidad positiva debe crear un LSM Tree");
+    tree.write(LsmKey::new(9), LsmValue::from("present"))
+        .expect("la escritura debe caber");
+    tree.flush_to_sstable(SegmentId::new(1))
+        .expect("el flush debe crear un segmento");
+
+    assert_eq!(tree.search(LsmKey::new(10)), None);
 }
 
 #[test]

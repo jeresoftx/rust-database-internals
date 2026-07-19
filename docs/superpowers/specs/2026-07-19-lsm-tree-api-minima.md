@@ -17,9 +17,9 @@ capítulo debe separar cuatro ideas:
 ## Frontera Actual
 
 El issue #17 definió contratos pequeños para no reinventar vocabulario en cada
-paso. El issue #18 agregó escrituras en memoria. El issue #19 agrega flush de
-MemTable a SSTable. Búsqueda entre segmentos y compaction real quedan fuera de
-esta frontera.
+paso. El issue #18 agregó escrituras en memoria. El issue #19 agregó flush de
+MemTable a SSTable. El issue #20 agrega búsqueda con precedencia explícita.
+Compaction real queda fuera de esta frontera.
 
 ## Invariantes Iniciales
 
@@ -36,6 +36,9 @@ esta frontera.
 - Una `SSTable` puede estar vacía como metadato educativo.
 - Una `SSTable` creada por flush no cambia si después se vuelve a escribir en
   la `MemTable`.
+- Una búsqueda revisa primero la `MemTable`.
+- Si la clave no está en memoria, la búsqueda revisa las `SSTable` desde la más
+  reciente hasta la más antigua.
 - Un `CompactionPlan` necesita al menos un segmento de entrada.
 - Un `CompactionPlan` no acepta entradas duplicadas.
 - El segmento de salida de una compaction debe ser nuevo.

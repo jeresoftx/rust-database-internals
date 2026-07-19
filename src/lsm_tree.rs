@@ -9,6 +9,51 @@
 
 use std::collections::{BTreeMap, HashSet};
 
+/// Árbol LSM educativo con MemTable activa y segmentos inmutables.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LsmTree {
+    memtable: MemTable,
+    segments: Vec<SSTable>,
+}
+
+impl LsmTree {
+    /// Crea un LSM Tree vacío.
+    pub fn new(memtable_max_entries: usize) -> Result<Self, LsmTreeError> {
+        Ok(Self {
+            memtable: MemTable::new(memtable_max_entries)?,
+            segments: Vec::new(),
+        })
+    }
+
+    /// Escribe o reemplaza una clave en la MemTable activa.
+    pub fn write(&mut self, key: LsmKey, value: LsmValue) -> Result<(), LsmTreeError> {
+        self.memtable.write(key, value)
+    }
+
+    /// Congela la MemTable activa y agrega el segmento al final.
+    pub fn flush_to_sstable(&mut self, segment_id: SegmentId) -> Result<(), LsmTreeError> {
+        let sstable = self.memtable.flush_to_sstable(segment_id)?;
+        self.segments.push(sstable);
+        Ok(())
+    }
+
+    /// Busca primero en MemTable y luego en SSTables, de más reciente a más
+    /// antigua.
+    pub fn search(&self, key: LsmKey) -> Option<LsmValue> {
+        self.memtable.search(key).or_else(|| {
+            self.segments
+                .iter()
+                .rev()
+                .find_map(|segment| segment.search(key))
+        })
+    }
+
+    /// Segmentos inmutables en orden de creación.
+    pub fn segments(&self) -> &[SSTable] {
+        &self.segments
+    }
+}
+
 /// Tabla mutable en memoria donde aterrizan las escrituras recientes.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MemTable {
@@ -71,6 +116,11 @@ impl MemTable {
             .iter()
             .map(|(key, value)| (*key, value.clone()))
             .collect()
+    }
+
+    /// Busca una clave dentro de la MemTable.
+    pub fn search(&self, key: LsmKey) -> Option<LsmValue> {
+        self.entries.get(&key).cloned()
     }
 
     /// Congela las entradas actuales en una SSTable inmutable y vacía memoria.
@@ -171,6 +221,14 @@ impl SSTable {
     /// Devuelve el snapshot ordenado almacenado en el segmento.
     pub fn entries(&self) -> Vec<(LsmKey, LsmValue)> {
         self.entries.clone()
+    }
+
+    /// Busca una clave dentro del snapshot del segmento.
+    pub fn search(&self, key: LsmKey) -> Option<LsmValue> {
+        self.entries
+            .binary_search_by_key(&key, |(entry_key, _)| *entry_key)
+            .ok()
+            .map(|position| self.entries[position].1.clone())
     }
 }
 

@@ -156,7 +156,7 @@ soluciones y benchmark educativo completos. No se marca como `reviewed` ni
   `LsmTreeError`.
 - [x] Modelar escrituras en memoria.
 - [x] Modelar flush a segmentos inmutables.
-- [ ] Modelar búsqueda entre memtable y segmentos.
+- [x] Modelar búsqueda entre memtable y segmentos.
 - [ ] Modelar compaction educativa.
 - [ ] Documentar tradeoffs frente a B-Tree.
 
