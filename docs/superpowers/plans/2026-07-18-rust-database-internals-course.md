@@ -47,7 +47,7 @@ Aplicación práctica:
 - Cada PR debe estar asociado al mismo milestone que el issue que resuelve.
 - Cada issue y PR deben llevar labels coherentes de tipo, capítulo o fase, y
   estado. Labels mínimos: `tipo: documentación`, `tipo: funcionalidad`,
-  `tipo: prueba`, `capítulo: b-tree`, `flujo: issue-pr` y
+  `tipo: prueba`, el label de capítulo correspondiente, `flujo: issue-pr` y
   `estado: revisión`.
 - El PR queda abierto hasta que Joel apruebe explícitamente el merge.
 - Si un task es demasiado grande para un solo commit, se divide antes de
@@ -152,7 +152,7 @@ soluciones y benchmark educativo completos. No se marca como `reviewed` ni
 
 ## Task 2: LSM Tree
 
-- [ ] Diseñar `MemTable`, `SSTable`, `SegmentId`, `CompactionPlan`,
+- [x] Diseñar `MemTable`, `SSTable`, `SegmentId`, `CompactionPlan`,
   `LsmTreeError`.
 - [ ] Modelar escrituras en memoria.
 - [ ] Modelar flush a segmentos inmutables.
