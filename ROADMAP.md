@@ -20,9 +20,10 @@ estado visible es `draft`: el mecanismo central existe, pero aún faltan
 ejemplos, ejercicios, soluciones, diagramas finales y benchmark educativo antes
 de elevarlo a `benchmarked`.
 
-Índices inicia su estado `draft` con la representación de índice primario e
-índice secundario. Los siguientes pasos agregan unicidad, duplicados,
-selectividad y costo de mantenimiento.
+Índices ya cuenta con representación de índice primario y secundario, reglas de
+unicidad, selectividad, documentación de costos, ejemplos progresivos,
+ejercicios y benchmark manual. Su estado visible es `benchmarked`: tiene
+medición educativa, pero todavía no se marca como `reviewed` ni `published`.
 
 El checklist detallado vive en
 [`docs/superpowers/plans/2026-07-18-rust-database-internals-course.md`](docs/superpowers/plans/2026-07-18-rust-database-internals-course.md).
@@ -33,7 +34,7 @@ El checklist detallado vive en
 |---|----------|--------|
 | 01 | B-Tree | benchmarked |
 | 02 | LSM Tree | draft |
-| 03 | Índices | draft |
+| 03 | Índices | benchmarked |
 | 04 | Transacciones | planned |
 | 05 | ACID | planned |
 | 06 | MVCC | planned |

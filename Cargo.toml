@@ -25,7 +25,24 @@ path = "examples/soluciones/btree_insert.rs"
 name = "btree_split"
 path = "examples/soluciones/btree_split.rs"
 
+[[example]]
+name = "indexes_unique"
+path = "examples/soluciones/indexes_unique.rs"
+
+[[example]]
+name = "indexes_selectivity"
+path = "examples/soluciones/indexes_selectivity.rs"
+
+[[example]]
+name = "indexes_maintenance"
+path = "examples/soluciones/indexes_maintenance.rs"
+
 [[bench]]
 name = "btree_bench"
 path = "benches/btree_bench.rs"
+harness = false
+
+[[bench]]
+name = "indexes_bench"
+path = "benches/indexes_bench.rs"
 harness = false
