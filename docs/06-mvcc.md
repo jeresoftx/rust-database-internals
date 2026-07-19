@@ -1,10 +1,10 @@
 # MVCC
 
-> **Estado:** draft.
+> **Estado:** tested.
 > **Alcance actual:** representación de versiones de registro, timestamps
 > lógicos, metadatos de visibilidad, snapshot reads básicos y decisiones
-> explícitas de visibilidad por timestamp. La comparación con PostgreSQL queda
-> para el siguiente paso del capítulo.
+> explícitas de visibilidad por timestamp. Incluye comparación educativa con
+> PostgreSQL sin convertirlo en dependencia del curso.
 
 ## Por qué existe
 
@@ -136,6 +136,7 @@ let first = chain.append(
     LogicalTimestamp::new(10),
     RecordValue::new("saldo=100")?,
 )?;
+chain.delete_latest_at(LogicalTimestamp::new(12))?;
 let second = chain.append(
     LogicalTimestamp::new(12),
     RecordValue::new("saldo=120")?,
@@ -201,22 +202,116 @@ t12)`: incluye el inicio, excluye el cierre. Esta frontera permite que una
 actualización cierre una versión vieja y cree una nueva en el mismo timestamp
 lógico sin que ambas sean visibles para el mismo snapshot.
 
+## Comparación con PostgreSQL
+
+PostgreSQL es una referencia útil porque implementa MVCC en un motor real y
+maduro. Su documentación oficial describe que cada sentencia observa una
+versión de la base de datos como existía en algún momento anterior, y que las
+lecturas no bloquean escrituras ni las escrituras bloquean lecturas bajo el
+modelo MVCC. Este curso conserva esa intuición, pero reduce el mecanismo para
+que pueda estudiarse en pocas estructuras Rust.
+
+La comparación debe leerse así:
+
+| Curso | PostgreSQL | Diferencia importante |
+|-------|------------|-----------------------|
+| `RecordId` | fila lógica identificada por clave de dominio | PostgreSQL no depende de una cadena como `accounts/42`; el identificador lógico suele venir de una clave primaria o de la consulta. |
+| `RecordVersion` | versión de fila o tupla | PostgreSQL crea nuevas versiones de fila al actualizar; este curso guarda la historia en una `VersionChain` explícita. |
+| `created_at` | idea cercana a `xmin` | En PostgreSQL `xmin` es el XID que insertó la versión, no un timestamp lógico simple. |
+| `deleted_at` | idea cercana a `xmax` | En PostgreSQL `xmax` puede ser distinto de cero aunque la versión aún sea visible, por ejemplo si la transacción que borró no ha confirmado o abortó. |
+| `Snapshot` | snapshot de sentencia o transacción | En PostgreSQL `Read Committed` toma snapshot por sentencia; `Repeatable Read` conserva una vista estable desde el inicio efectivo de la transacción. |
+| `VisibilityDecision` | regla interna de visibilidad | PostgreSQL consulta XIDs, estado de transacciones, snapshots y más metadatos; aquí solo hay `Visible`, `NotYetCreated` y `Deleted`. |
+| `VersionChain::read` | elegir la versión visible de una fila | PostgreSQL debe hacerlo dentro de páginas, índices, heap tuples, locks y reglas de aislamiento reales. |
+
+### `xmin`, `xmax` y `ctid`
+
+PostgreSQL expone columnas de sistema que ayudan a entender MVCC:
+
+- `xmin` identifica la transacción que insertó una versión de fila;
+- `xmax` identifica la transacción que borró una versión, o queda en cero si no
+  fue borrada;
+- `ctid` apunta a la ubicación física de una versión de fila.
+
+Nuestro modelo traduce esa idea a nombres más pedagógicos: `created_at`,
+`deleted_at` y `VersionId`. Esta traducción es útil para aprender, pero no debe
+confundirse con el diseño real de PostgreSQL. En especial, `ctid` no debe
+usarse como identidad lógica estable porque puede cambiar cuando una fila se
+actualiza o se mueve por mantenimiento.
+
+### Snapshots e aislamiento
+
+PostgreSQL diferencia niveles de aislamiento. En `Read Committed`, que es el
+nivel por defecto, cada sentencia ve datos confirmados antes de que la consulta
+comience. Por eso dos consultas dentro de una misma transacción pueden ver
+resultados distintos si otra transacción confirma entre ambas.
+
+En `Repeatable Read`, una transacción conserva una vista estable desde el inicio
+de su primera sentencia relevante. Eso se parece más a crear un `Snapshot` una
+vez y reusarlo. Este curso empieza con un `Snapshot` explícito porque permite
+separar dos preguntas:
+
+- qué versiones existen;
+- qué versión puede observar una lectura.
+
+### Vacuum y versiones muertas
+
+MVCC crea versiones antiguas. En PostgreSQL, un `UPDATE` o `DELETE` no elimina
+inmediatamente la versión anterior de la fila porque todavía podría ser visible
+para transacciones que conservan snapshots antiguos. Cuando ya no puede ser
+vista por ninguna transacción relevante, `VACUUM` puede recuperar espacio y
+mantener saludable el sistema.
+
+Este capítulo no implementa vacuum. La ausencia es intencional: primero se
+aprende a conservar historia y leerla correctamente; después, en capítulos de
+WAL, recovery y mantenimiento, se puede estudiar cómo un motor limpia, compacta
+y recupera estructuras sin romper garantías.
+
+### Dónde termina la comparación
+
+El modelo del curso no implementa:
+
+- transacciones activas, confirmadas o abortadas;
+- snapshots con conjuntos de XIDs activos;
+- `cmin`, `cmax`, command IDs ni efectos de la misma transacción;
+- `ctid`, páginas heap, HOT updates ni visibilidad de índices;
+- Serializable Snapshot Isolation;
+- autovacuum, freezing ni protección contra wraparound de XIDs.
+
+PostgreSQL entra aquí como mapa de orientación. El objetivo no es copiar su
+código ni simplificarlo de más; el objetivo es que, cuando el estudiante lea
+`xmin`, `xmax`, snapshots o vacuum en documentación real, ya tenga una imagen
+mental pequeña y probada en Rust.
+
 ## Lo que aún no hace
 
-Este borrador no decide todavía:
+Este modelo todavía no decide:
 
 - qué snapshot obtiene una transacción real al comenzar;
 - cómo se modelan transacciones activas, confirmadas o abortadas dentro de la
   regla de visibilidad;
 - qué ocurre con versiones de transacciones abortadas;
 - cuándo una versión antigua puede ser recolectada;
-- cómo se compara este modelo con `xmin`, `xmax` y snapshots de PostgreSQL.
+- cómo se integran índices, heap pages y limpieza de versiones muertas.
 
 Esa separación evita un error común: querer explicar MVCC completo antes de
 tener una representación mínima verificable. Primero se representa la historia;
 después se decide qué lector puede observar cada parte de esa historia.
 
+## Fuentes oficiales consultadas
+
+- PostgreSQL 18: `13.1 Introduction`, documentación oficial de MVCC:
+  <https://www.postgresql.org/docs/current/mvcc-intro.html>
+- PostgreSQL 18: `5.6 System Columns`, columnas `xmin`, `xmax` y `ctid`:
+  <https://www.postgresql.org/docs/current/ddl-system-columns.html>
+- PostgreSQL 18: `13.2 Transaction Isolation`, snapshots por nivel de
+  aislamiento:
+  <https://www.postgresql.org/docs/current/transaction-iso.html>
+- PostgreSQL 18: `24.1 Routine Vacuuming`, recuperación de espacio y versiones
+  muertas:
+  <https://www.postgresql.org/docs/current/routine-vacuuming.html>
+
 ## Siguiente paso natural
 
-El siguiente paso del capítulo es documentar la relación con PostgreSQL como
-comparación, sin volver el curso dependiente de PostgreSQL.
+El siguiente paso del repositorio es abrir el capítulo 07: Write-Ahead Log. WAL
+conecta con MVCC porque ayuda a responder qué cambios confirmados sobreviven a
+una falla y cómo se reconstruye la historia después de un crash.
