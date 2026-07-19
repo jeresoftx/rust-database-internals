@@ -87,7 +87,7 @@ Aplicación práctica:
 - [ ] Desarrollar capítulo 03: Índices.
 - [x] Desarrollar capítulo 04: Transacciones.
 - [x] Desarrollar capítulo 05: ACID.
-- [ ] Desarrollar capítulo 06: MVCC.
+- [x] Desarrollar capítulo 06: MVCC.
 - [ ] Desarrollar capítulo 07: Write-Ahead Log.
 - [ ] Desarrollar capítulo 08: Recovery.
 - [ ] Desarrollar capítulo 09: Replicación.
@@ -194,7 +194,7 @@ soluciones y benchmark educativo completos. No se marca como `reviewed` ni
 - [x] Diseñar versiones de registro.
 - [x] Modelar snapshot reads.
 - [x] Modelar visibilidad por timestamp lógico.
-- [ ] Documentar relación con PostgreSQL como comparación.
+- [x] Documentar relación con PostgreSQL como comparación.
 
 ## Task 7: Write-Ahead Log
 

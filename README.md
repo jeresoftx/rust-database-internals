@@ -41,7 +41,7 @@ pertenecen a la secuela propuesta `rust-database-systems`.
 | 03 | Índices | `src/indexes.rs` | benchmarked |
 | 04 | Transacciones | `src/transactions.rs` | benchmarked |
 | 05 | ACID | `src/acid.rs` | benchmarked |
-| 06 | MVCC | `src/mvcc.rs` | draft |
+| 06 | MVCC | `src/mvcc.rs` | tested |
 | 07 | Write-Ahead Log | `src/wal.rs` | planned |
 | 08 | Recovery | `src/recovery.rs` | planned |
 | 09 | Replicación | `src/replication.rs` | planned |
