@@ -1,6 +1,6 @@
 use rust_database_internals::mvcc::{
     LogicalTimestamp, MvccError, RecordId, RecordValue, RecordVersion, Snapshot, VersionChain,
-    VersionId,
+    VersionId, VisibilityDecision,
 };
 
 #[test]
@@ -145,6 +145,44 @@ fn record_version_is_visible_after_creation() {
 }
 
 #[test]
+fn visibility_at_reports_not_yet_created_before_creation_boundary() {
+    let record_id = RecordId::new("accounts/42").expect("id válido");
+    let value = RecordValue::new("saldo=100").expect("valor válido");
+    let version = RecordVersion::new(
+        record_id,
+        VersionId::new(1),
+        LogicalTimestamp::new(10),
+        value,
+    );
+
+    assert_eq!(
+        version.visibility_at(LogicalTimestamp::new(9)),
+        VisibilityDecision::NotYetCreated {
+            created_at: LogicalTimestamp::new(10),
+            read_at: LogicalTimestamp::new(9),
+        }
+    );
+}
+
+#[test]
+fn visibility_at_reports_visible_at_creation_boundary() {
+    let record_id = RecordId::new("accounts/42").expect("id válido");
+    let value = RecordValue::new("saldo=100").expect("valor válido");
+    let version = RecordVersion::new(
+        record_id,
+        VersionId::new(1),
+        LogicalTimestamp::new(10),
+        value,
+    );
+
+    assert_eq!(
+        version.visibility_at(LogicalTimestamp::new(10)),
+        VisibilityDecision::Visible
+    );
+    assert!(version.is_visible_at(LogicalTimestamp::new(10)));
+}
+
+#[test]
 fn record_version_is_not_visible_before_creation() {
     let record_id = RecordId::new("accounts/42").expect("id válido");
     let value = RecordValue::new("saldo=100").expect("valor válido");
@@ -178,6 +216,50 @@ fn record_version_is_not_visible_at_delete_timestamp() {
 }
 
 #[test]
+fn visibility_at_reports_visible_just_before_delete_boundary() {
+    let record_id = RecordId::new("accounts/42").expect("id válido");
+    let value = RecordValue::new("saldo=100").expect("valor válido");
+    let mut version = RecordVersion::new(
+        record_id,
+        VersionId::new(1),
+        LogicalTimestamp::new(10),
+        value,
+    );
+    version
+        .delete_at(LogicalTimestamp::new(12))
+        .expect("borrado lógico válido");
+
+    assert_eq!(
+        version.visibility_at(LogicalTimestamp::new(11)),
+        VisibilityDecision::Visible
+    );
+}
+
+#[test]
+fn visibility_at_reports_deleted_at_delete_boundary() {
+    let record_id = RecordId::new("accounts/42").expect("id válido");
+    let value = RecordValue::new("saldo=100").expect("valor válido");
+    let mut version = RecordVersion::new(
+        record_id,
+        VersionId::new(1),
+        LogicalTimestamp::new(10),
+        value,
+    );
+    version
+        .delete_at(LogicalTimestamp::new(12))
+        .expect("borrado lógico válido");
+
+    assert_eq!(
+        version.visibility_at(LogicalTimestamp::new(12)),
+        VisibilityDecision::Deleted {
+            deleted_at: LogicalTimestamp::new(12),
+            read_at: LogicalTimestamp::new(12),
+        }
+    );
+    assert!(!version.is_visible_at(LogicalTimestamp::new(12)));
+}
+
+#[test]
 fn version_chain_starts_empty_for_record() {
     let record_id = RecordId::new("accounts/42").expect("id válido");
     let chain = VersionChain::new(record_id.clone());
@@ -195,6 +277,22 @@ fn version_chain_reads_none_when_empty() {
     let snapshot = Snapshot::new(LogicalTimestamp::new(10));
 
     assert_eq!(chain.read(&snapshot), None);
+}
+
+#[test]
+fn version_chain_read_at_matches_snapshot_read() {
+    let record_id = RecordId::new("accounts/42").expect("id válido");
+    let mut chain = VersionChain::new(record_id);
+    chain
+        .append(
+            LogicalTimestamp::new(10),
+            RecordValue::new("saldo=100").expect("valor válido"),
+        )
+        .expect("primera versión debe entrar");
+    let read_at = LogicalTimestamp::new(10);
+    let snapshot = Snapshot::new(read_at);
+
+    assert_eq!(chain.read_at(read_at), chain.read(&snapshot));
 }
 
 #[test]

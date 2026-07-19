@@ -50,10 +50,15 @@ impl VersionChain {
 
     /// Lee la versión visible para un snapshot.
     pub fn read(&self, snapshot: &Snapshot) -> Option<&RecordVersion> {
+        self.read_at(snapshot.read_at())
+    }
+
+    /// Lee la versión visible para un timestamp lógico.
+    pub fn read_at(&self, read_at: LogicalTimestamp) -> Option<&RecordVersion> {
         self.versions
             .iter()
             .rev()
-            .find(|version| version.is_visible_in(snapshot))
+            .find(|version| version.is_visible_at(read_at))
     }
 
     /// Agrega una nueva versión con timestamp lógico monótono.
@@ -189,6 +194,34 @@ impl Snapshot {
     }
 }
 
+/// Resultado explícito de evaluar una versión contra un timestamp lógico.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum VisibilityDecision {
+    /// La versión puede observarse en el timestamp solicitado.
+    Visible,
+    /// La lectura ocurrió antes de que la versión existiera.
+    NotYetCreated {
+        /// Timestamp de creación de la versión.
+        created_at: LogicalTimestamp,
+        /// Timestamp de lectura evaluado.
+        read_at: LogicalTimestamp,
+    },
+    /// La lectura ocurrió después del cierre lógico de la versión.
+    Deleted {
+        /// Timestamp de cierre lógico de la versión.
+        deleted_at: LogicalTimestamp,
+        /// Timestamp de lectura evaluado.
+        read_at: LogicalTimestamp,
+    },
+}
+
+impl VisibilityDecision {
+    /// Devuelve `true` cuando la decisión permite observar la versión.
+    pub const fn is_visible(self) -> bool {
+        matches!(self, Self::Visible)
+    }
+}
+
 /// Versión concreta de un registro lógico.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RecordVersion {
@@ -248,10 +281,33 @@ impl RecordVersion {
 
     /// Devuelve `true` cuando esta versión es visible para el snapshot.
     pub fn is_visible_in(&self, snapshot: &Snapshot) -> bool {
-        self.created_at <= snapshot.read_at()
-            && self
-                .deleted_at
-                .is_none_or(|deleted_at| snapshot.read_at() < deleted_at)
+        self.is_visible_at(snapshot.read_at())
+    }
+
+    /// Devuelve `true` cuando esta versión es visible en un timestamp lógico.
+    pub fn is_visible_at(&self, read_at: LogicalTimestamp) -> bool {
+        self.visibility_at(read_at).is_visible()
+    }
+
+    /// Evalúa por qué una versión es visible o no en un timestamp lógico.
+    pub fn visibility_at(&self, read_at: LogicalTimestamp) -> VisibilityDecision {
+        if read_at < self.created_at {
+            return VisibilityDecision::NotYetCreated {
+                created_at: self.created_at,
+                read_at,
+            };
+        }
+
+        if let Some(deleted_at) = self.deleted_at {
+            if deleted_at <= read_at {
+                return VisibilityDecision::Deleted {
+                    deleted_at,
+                    read_at,
+                };
+            }
+        }
+
+        VisibilityDecision::Visible
     }
 
     /// Marca la versión como borrada en un timestamp lógico posterior o igual.

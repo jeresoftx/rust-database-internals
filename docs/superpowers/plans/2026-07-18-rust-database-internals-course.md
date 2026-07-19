@@ -193,7 +193,7 @@ soluciones y benchmark educativo completos. No se marca como `reviewed` ni
 
 - [x] Diseñar versiones de registro.
 - [x] Modelar snapshot reads.
-- [ ] Modelar visibilidad por timestamp lógico.
+- [x] Modelar visibilidad por timestamp lógico.
 - [ ] Documentar relación con PostgreSQL como comparación.
 
 ## Task 7: Write-Ahead Log
