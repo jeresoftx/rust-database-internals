@@ -1,5 +1,6 @@
 use rust_database_internals::wal::{
     LogOperation, LogRecord, LogSequenceNumber, PageId, PageImage, WalError, WalTransactionId,
+    WriteAheadLog,
 };
 
 #[test]
@@ -117,4 +118,74 @@ fn rollback_record_is_a_terminal_operation() {
     assert_eq!(record.operation().name(), "rollback");
     assert!(!record.is_redoable());
     assert!(!record.is_undoable());
+}
+
+#[test]
+fn write_ahead_log_starts_empty() {
+    let log = WriteAheadLog::new();
+
+    assert!(log.is_empty());
+    assert_eq!(log.len(), 0);
+    assert_eq!(log.next_lsn(), LogSequenceNumber::new(1));
+    assert_eq!(log.last_lsn(), None);
+    assert!(log.records().is_empty());
+}
+
+#[test]
+fn write_ahead_log_appends_records_with_monotonic_lsn() {
+    let mut log = WriteAheadLog::new();
+    let transaction_id = WalTransactionId::new(10);
+
+    let begin_lsn = log.append_begin(transaction_id);
+    let commit_lsn = log.append_commit(transaction_id);
+
+    assert_eq!(begin_lsn, LogSequenceNumber::new(1));
+    assert_eq!(commit_lsn, LogSequenceNumber::new(2));
+    assert_eq!(log.next_lsn(), LogSequenceNumber::new(3));
+    assert_eq!(log.last_lsn(), Some(LogSequenceNumber::new(2)));
+}
+
+#[test]
+fn write_ahead_log_preserves_append_order() {
+    let mut log = WriteAheadLog::new();
+    let transaction_id = WalTransactionId::new(10);
+    let page_id = PageId::new("heap/accounts/0001").expect("page id válido");
+    let before = PageImage::new("saldo=100").expect("imagen válida");
+    let after = PageImage::new("saldo=120").expect("imagen válida");
+    let update = LogOperation::update(page_id, before, after).expect("update válido");
+
+    log.append_begin(transaction_id);
+    log.append(transaction_id, update);
+    log.append_commit(transaction_id);
+
+    let operations: Vec<&str> = log.iter().map(|record| record.operation().name()).collect();
+
+    assert_eq!(operations, vec!["begin", "update", "commit"]);
+}
+
+#[test]
+fn write_ahead_log_can_append_existing_record_when_lsn_matches_next() {
+    let mut log = WriteAheadLog::new();
+    let record = LogRecord::begin(LogSequenceNumber::new(1), WalTransactionId::new(10));
+
+    log.append_record(record.clone())
+        .expect("registro con LSN esperado debe entrar");
+
+    assert_eq!(log.records(), &[record]);
+    assert_eq!(log.next_lsn(), LogSequenceNumber::new(2));
+}
+
+#[test]
+fn write_ahead_log_rejects_existing_record_with_unexpected_lsn() {
+    let mut log = WriteAheadLog::new();
+    let record = LogRecord::begin(LogSequenceNumber::new(2), WalTransactionId::new(10));
+
+    assert_eq!(
+        log.append_record(record),
+        Err(WalError::UnexpectedLsn {
+            expected: LogSequenceNumber::new(1),
+            actual: LogSequenceNumber::new(2),
+        })
+    );
+    assert!(log.is_empty());
 }
