@@ -24,6 +24,8 @@ de unicidad, selectividad o costo, el curso necesita separar dos roles:
 - `IndexEntryKey`: llave almacenada dentro de un índice.
 - `PrimaryKeyValue`: valor de primary key referenciado por el índice.
 - `IndexEntries`: colección educativa de entradas con regla de unicidad.
+- `Selectivity`: llaves distintas, filas indexadas y proporción educativa.
+- `SelectivityClass`: `Empty`, `High`, `Medium` o `Low`.
 
 ## Invariantes
 
@@ -45,6 +47,14 @@ de unicidad, selectividad o costo, el curso necesita separar dos roles:
 - `IndexEntries` con `IndexUniqueness::NonUnique` permite varias primary keys
   para una misma llave.
 - Buscar una llave ausente devuelve una lista vacía.
+- `IndexEntries::selectivity` calcula llaves distintas entre filas indexadas.
+- Un índice vacío tiene selectividad `0.0` y clase `Empty`.
+- Un índice con proporción mayor o igual a `0.8` se clasifica como `High`.
+- Un índice con proporción mayor o igual a `0.3` y menor que `0.8` se clasifica
+  como `Medium`.
+- Un índice no vacío con proporción menor que `0.3` se clasifica como `Low`.
+- `estimated_candidates_for` devuelve el número de primary keys asociadas a la
+  llave buscada.
 
 ## Decisión De Diseño
 
@@ -53,6 +63,6 @@ El índice secundario apunta a la primary key y no directamente a
 búsqueda no deberían inventar una segunda identidad de fila. Primero encuentran
 la identidad canónica; después esa identidad permite resolver la ubicación.
 
-El issue #24 agrega la primera regla de duplicados. La implementación todavía
-no modela selectividad ni costo de mantenimiento. Esas piezas quedan para los
-issues #25 y #26.
+El issue #24 agrega la primera regla de duplicados. El issue #25 agrega
+selectividad y estimación de candidatos. La implementación todavía no modela
+costo de mantenimiento; esa pieza queda para el issue #26.
