@@ -2,8 +2,8 @@
 
 > **Estado:** borrador técnico de propiedades.
 > **Alcance actual:** Atomicity, Consistency, Isolation y Durability desde el
-> punto de vista de internals. Los modelos Rust mínimos, ejercicios de fallas
-> parciales y benchmarks se agregan en pasos posteriores.
+> punto de vista de internals; modelos Rust mínimos para cada propiedad. Los
+> ejercicios de fallas parciales y benchmarks se agregan en pasos posteriores.
 
 ## Por Qué Existe
 
@@ -40,6 +40,22 @@ defender el motor. Dos motores pueden cumplir ACID con mecanismos distintos:
 locks, MVCC, snapshots, logs append-only, checkpoints, fsync, replicación o
 combinaciones de esas piezas.
 
+## Modelo Rust Actual
+
+El módulo `src/acid.rs` contiene cuatro modelos mínimos:
+
+- `AtomicUnit`: unidad de cambios tentativos que se confirma o se revierte
+  completa;
+- `UniqueConstraint`: constraint de unicidad para enseñar consistencia;
+- `ReadCommittedCell`: celda con valor confirmado y escritura pendiente para
+  enseñar aislamiento de lectura confirmada;
+- `CommitLog`: log educativo donde un commit solo es durable después de
+  sincronizarse.
+
+Estos modelos no reemplazan transacciones, MVCC ni WAL. Son laboratorios
+pequeños para sentir qué promete cada letra antes de construir mecanismos más
+realistas.
+
 ## Atomicity
 
 Atomicity significa que una transacción se acepta como unidad o se descarta
@@ -56,6 +72,11 @@ En el capítulo de Transacciones, esta propiedad aparece como ciclo de vida:
 `Active`, `Committed` y `RolledBack`. Ese modelo todavía no guarda páginas ni
 mantiene undo/redo, pero ya enseña una idea clave: una transacción cerrada no
 vuelve a estar abierta.
+
+En `AtomicUnit`, los cambios entran primero a `staged_changes`. `commit` mueve
+todos esos cambios a `committed_changes`. `rollback` los descarta. Si la unidad
+ya está cerrada, cualquier intento de agregar más cambios devuelve
+`AcidError::ClosedAtomicUnit`.
 
 En un motor real, atomicidad suele apoyarse en:
 
@@ -91,6 +112,10 @@ La consistencia no reemplaza validación de dominio. Un banco todavía debe sabe
 qué significa una transferencia legítima. El motor provee mecanismos para que
 esas reglas se representen y no queden a merced de escrituras sueltas.
 
+En `UniqueConstraint`, insertar un valor nuevo preserva la invariante. Insertar
+el mismo valor dos veces devuelve `AcidError::ConsistencyViolation` con el
+nombre de la invariante y el valor rechazado.
+
 ## Isolation
 
 Isolation significa que las transacciones concurrentes no deben observarse de
@@ -112,6 +137,11 @@ un `ResourceId`. Si otra transacción intenta tomarlo, recibe
 
 MVCC ampliará esta idea desde otra dirección: en vez de bloquear todo, el motor
 puede mantener versiones y snapshots para decidir qué ve cada transacción.
+
+En `ReadCommittedCell`, una escritura pendiente no cambia lo que devuelve
+`read_committed`. Solo `commit_pending` publica el valor. Si otro escritor
+intenta preparar un cambio mientras hay uno pendiente, el modelo devuelve
+`AcidError::PendingWriteConflict`.
 
 ## Durability
 
@@ -140,6 +170,11 @@ La durabilidad suele apoyarse en Write-Ahead Log:
 Este capítulo no implementa WAL ni recovery. Solo deja la promesa bien nombrada
 para que el capítulo de Write-Ahead Log pueda explicar la regla central:
 primero el log, después la página.
+
+En `CommitLog`, `append_commit` registra un commit todavía no durable.
+`sync` marca ese commit como durable. Consultar `is_durable` antes y después de
+`sync` separa la idea de "registrado en memoria del modelo" de "prometido como
+recuperable".
 
 ## Cómo Se Relacionan
 
@@ -173,6 +208,10 @@ ya había prometido conservar.
 - ACID describe promesas del motor, no un único algoritmo de implementación.
 - El modelo actual de Transacciones solo cubre una parte pequeña de Atomicity e
   Isolation.
+- `AtomicUnit` confirma o descarta todos sus cambios tentativos como unidad.
+- `UniqueConstraint` rechaza valores duplicados para preservar una invariante.
+- `ReadCommittedCell` oculta escrituras pendientes hasta que se confirman.
+- `CommitLog` no considera durable un commit hasta que se sincroniza.
 - Consistency se conecta con índices, constraints e invariantes de estructuras.
 - Durability se conecta con WAL, recovery y checkpoints.
 
@@ -180,11 +219,11 @@ ya había prometido conservar.
 
 Este capítulo todavía no implementa:
 
-- tipos Rust para representar cada propiedad;
 - fallas parciales ejecutables;
 - WAL, redo, undo o recovery;
 - niveles formales de aislamiento;
 - integración con MVCC.
 
-La frontera es intencional. Primero se documenta qué promete ACID; después se
-construyen modelos mínimos para sentir dónde se rompe cada promesa.
+La frontera es intencional. Ya existen modelos mínimos para sentir cada
+promesa; el siguiente paso agrega fallas parciales ejecutables para observar
+dónde se rompe cada una.

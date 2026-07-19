@@ -32,9 +32,9 @@ atomicidad y aislamiento, diagrama Mermaid, ejemplos progresivos, ejercicios,
 soluciones y benchmark manual. Su estado visible es `benchmarked`: tiene
 medición educativa, pero todavía no se marca como `reviewed` ni `published`.
 
-ACID inicia su estado `draft` con la documentación de Atomicity, Consistency,
-Isolation y Durability desde internals. Los siguientes pasos agregan modelos
-mínimos por propiedad y ejercicios de fallas parciales.
+ACID está en estado `draft` con la documentación de Atomicity, Consistency,
+Isolation y Durability desde internals, más modelos Rust mínimos para cada
+propiedad. El siguiente paso agrega ejercicios de fallas parciales.
 
 El checklist detallado vive en
 [`docs/superpowers/plans/2026-07-18-rust-database-internals-course.md`](docs/superpowers/plans/2026-07-18-rust-database-internals-course.md).

@@ -182,7 +182,7 @@ soluciones y benchmark educativo completos. No se marca como `reviewed` ni
 ## Task 5: ACID
 
 - [x] Documentar Atomicity, Consistency, Isolation y Durability.
-- [ ] Crear modelos mínimos por propiedad.
+- [x] Crear modelos mínimos por propiedad.
 - [ ] Diseñar ejercicios de fallas parciales.
 
 ## Task 6: MVCC
