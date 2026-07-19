@@ -3,7 +3,7 @@
 > **Estado:** borrador técnico de representación.
 > **Alcance actual:** índice primario, índice secundario, nombres de índice,
 > nombres de columna, rol del índice, destino lógico de búsqueda, índice único
-> e índice no único.
+> e índice no único, selectividad y estimación de candidatos.
 
 ## Por Qué Existe
 
@@ -33,6 +33,10 @@ Piezas actuales:
 - `IndexUniqueness`: distingue `Unique` y `NonUnique`;
 - `IndexTarget`: explica hacia dónde apunta el índice;
 - `IndexEntries`: modela entradas de índice y reglas de duplicado;
+- `Selectivity`: resume cuántas llaves distintas existen frente a cuántas
+  filas indexadas;
+- `SelectivityClass`: clasifica esa proporción como `Empty`, `High`, `Medium`
+  o `Low`;
 - `IndexDefinition`: une nombre, rol, columnas y destino.
 
 Un índice primario apunta a `IndexTarget::RecordPointer`, porque su búsqueda
@@ -106,6 +110,42 @@ country = "MX" -> customer_id = 123
 Este caso es común en columnas de clasificación. La búsqueda por país no
 identifica una sola fila; devuelve un conjunto de candidatos.
 
+## Selectividad
+
+La selectividad mide qué tanto reduce candidatos un índice.
+
+En este modelo educativo:
+
+```text
+selectividad = llaves_distintas / filas_indexadas
+```
+
+Un índice único con una llave distinta por fila tiene selectividad alta:
+
+```text
+customer_id = 1 -> 1
+customer_id = 2 -> 2
+
+llaves_distintas = 2
+filas_indexadas = 2
+selectividad = 1.0
+```
+
+Un índice no único con valores repetidos reduce menos:
+
+```text
+country = "MX" -> 1, 2
+country = "US" -> 3, 4
+
+llaves_distintas = 2
+filas_indexadas = 4
+selectividad = 0.5
+```
+
+La selectividad no ejecuta una consulta por sí sola. Ayuda a estimar cuántas
+filas candidatas quedan después de usar el índice. Si una llave apunta a muchas
+primary keys, el motor todavía tendrá bastante trabajo posterior.
+
 ## Diagrama Mental
 
 ```mermaid
@@ -131,13 +171,16 @@ flowchart LR
 - Un `IndexEntries` único rechaza una llave repetida.
 - Un `IndexEntries` no único permite varias primary keys para la misma llave.
 - Buscar una llave ausente devuelve un conjunto vacío de primary keys.
-- La definición del índice no decide todavía selectividad ni costo.
+- `Selectivity::ratio` devuelve `0.0` cuando el índice está vacío.
+- La selectividad se calcula como llaves distintas entre filas indexadas.
+- `estimated_candidates_for` devuelve cuántas primary keys existen para una
+  llave.
+- La definición del índice no decide todavía costo de mantenimiento.
 
 ## Lo Que Todavía No Modela
 
 Este primer paso no implementa:
 
-- selectividad;
 - costo de mantenimiento al escribir;
 - uso de B-Tree o LSM Tree como estructura física;
 - interacción con transacciones, MVCC o WAL.

@@ -148,6 +148,83 @@ impl IndexEntries {
     pub fn primary_keys_for(&self, key: &IndexEntryKey) -> Vec<PrimaryKeyValue> {
         self.entries.get(key).cloned().unwrap_or_default()
     }
+
+    /// Calcula la selectividad como llaves distintas entre filas indexadas.
+    pub fn selectivity(&self) -> Selectivity {
+        let distinct_keys = self.entries.len();
+        let indexed_rows = self.entries.values().map(std::vec::Vec::len).sum::<usize>();
+
+        Selectivity::new(distinct_keys, indexed_rows)
+    }
+
+    /// Estima cuántas filas candidatas devolvería una búsqueda por llave.
+    pub fn estimated_candidates_for(&self, key: &IndexEntryKey) -> usize {
+        self.entries.get(key).map_or(0, std::vec::Vec::len)
+    }
+}
+
+/// Selectividad educativa de un índice.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Selectivity {
+    distinct_keys: usize,
+    indexed_rows: usize,
+}
+
+impl Selectivity {
+    /// Crea una métrica de selectividad.
+    pub const fn new(distinct_keys: usize, indexed_rows: usize) -> Self {
+        Self {
+            distinct_keys,
+            indexed_rows,
+        }
+    }
+
+    /// Número de llaves distintas almacenadas en el índice.
+    pub const fn distinct_keys(self) -> usize {
+        self.distinct_keys
+    }
+
+    /// Número total de filas referenciadas por el índice.
+    pub const fn indexed_rows(self) -> usize {
+        self.indexed_rows
+    }
+
+    /// Proporción `distinct_keys / indexed_rows`.
+    pub fn ratio(self) -> f64 {
+        if self.indexed_rows == 0 {
+            return 0.0;
+        }
+
+        self.distinct_keys as f64 / self.indexed_rows as f64
+    }
+
+    /// Clasifica la selectividad para razonar sobre costo de consulta.
+    pub fn class(self) -> SelectivityClass {
+        let ratio = self.ratio();
+
+        if self.indexed_rows == 0 {
+            SelectivityClass::Empty
+        } else if ratio >= 0.8 {
+            SelectivityClass::High
+        } else if ratio >= 0.3 {
+            SelectivityClass::Medium
+        } else {
+            SelectivityClass::Low
+        }
+    }
+}
+
+/// Clasificación educativa de selectividad.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SelectivityClass {
+    /// El índice no contiene filas.
+    Empty,
+    /// Muchas llaves distintas para las filas indexadas.
+    High,
+    /// Algunas llaves se repiten, pero todavía reducen candidatos.
+    Medium,
+    /// Pocas llaves distintas para muchas filas.
+    Low,
 }
 
 /// Llave almacenada dentro de un índice educativo.

@@ -1,6 +1,6 @@
 use rust_database_internals::indexes::{
     ColumnName, IndexDefinition, IndexEntries, IndexEntryKey, IndexError, IndexName, IndexRole,
-    IndexTarget, IndexUniqueness, PrimaryKeyValue,
+    IndexTarget, IndexUniqueness, PrimaryKeyValue, SelectivityClass,
 };
 
 #[test]
@@ -131,4 +131,92 @@ fn index_entries_return_empty_result_for_absent_key() {
         entries.primary_keys_for(&IndexEntryKey::from("absent")),
         Vec::<PrimaryKeyValue>::new()
     );
+}
+
+#[test]
+fn empty_index_has_zero_selectivity() {
+    let entries = IndexEntries::new(IndexUniqueness::NonUnique);
+
+    let selectivity = entries.selectivity();
+
+    assert_eq!(selectivity.distinct_keys(), 0);
+    assert_eq!(selectivity.indexed_rows(), 0);
+    assert_eq!(selectivity.ratio(), 0.0);
+    assert_eq!(selectivity.class(), SelectivityClass::Empty);
+}
+
+#[test]
+fn unique_entries_have_high_selectivity() {
+    let mut entries = IndexEntries::new(IndexUniqueness::Unique);
+    entries
+        .insert(
+            IndexEntryKey::from("customer-1"),
+            PrimaryKeyValue::from("1"),
+        )
+        .expect("la llave única debe insertarse");
+    entries
+        .insert(
+            IndexEntryKey::from("customer-2"),
+            PrimaryKeyValue::from("2"),
+        )
+        .expect("la llave única debe insertarse");
+
+    let selectivity = entries.selectivity();
+
+    assert_eq!(selectivity.distinct_keys(), 2);
+    assert_eq!(selectivity.indexed_rows(), 2);
+    assert_eq!(selectivity.ratio(), 1.0);
+    assert_eq!(selectivity.class(), SelectivityClass::High);
+}
+
+#[test]
+fn repeated_values_reduce_selectivity_and_estimate_candidates() {
+    let mut entries = IndexEntries::new(IndexUniqueness::NonUnique);
+    entries
+        .insert(IndexEntryKey::from("MX"), PrimaryKeyValue::from("1"))
+        .expect("el índice no único acepta duplicados");
+    entries
+        .insert(IndexEntryKey::from("MX"), PrimaryKeyValue::from("2"))
+        .expect("el índice no único acepta duplicados");
+    entries
+        .insert(IndexEntryKey::from("US"), PrimaryKeyValue::from("3"))
+        .expect("el índice no único acepta otro valor");
+    entries
+        .insert(IndexEntryKey::from("US"), PrimaryKeyValue::from("4"))
+        .expect("el índice no único acepta duplicados");
+
+    let selectivity = entries.selectivity();
+
+    assert_eq!(selectivity.distinct_keys(), 2);
+    assert_eq!(selectivity.indexed_rows(), 4);
+    assert_eq!(selectivity.ratio(), 0.5);
+    assert_eq!(selectivity.class(), SelectivityClass::Medium);
+    assert_eq!(
+        entries.estimated_candidates_for(&IndexEntryKey::from("MX")),
+        2
+    );
+    assert_eq!(
+        entries.estimated_candidates_for(&IndexEntryKey::from("absent")),
+        0
+    );
+}
+
+#[test]
+fn heavily_repeated_values_have_low_selectivity() {
+    let mut entries = IndexEntries::new(IndexUniqueness::NonUnique);
+    for primary_key in ["1", "2", "3", "4"] {
+        entries
+            .insert(
+                IndexEntryKey::from("active"),
+                PrimaryKeyValue::from(primary_key),
+            )
+            .expect("el índice no único acepta duplicados");
+    }
+
+    let selectivity = entries.selectivity();
+
+    assert_eq!(selectivity.distinct_keys(), 1);
+    assert_eq!(selectivity.indexed_rows(), 4);
+    assert_eq!(selectivity.ratio(), 0.25);
+    assert_eq!(selectivity.class(), SelectivityClass::Low);
 }
