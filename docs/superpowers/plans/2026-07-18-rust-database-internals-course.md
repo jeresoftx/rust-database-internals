@@ -125,7 +125,7 @@ Aplicación práctica:
   separadoras y punteros.
 - [x] Crear diagrama Mermaid de nodo raíz, hojas y split.
 - [x] Crear ejemplos progresivos y caso real de índice por primary key.
-- [ ] Crear ejercicios y soluciones.
+- [x] Crear ejercicios y soluciones.
 - [ ] Crear benchmark de búsqueda e inserción.
 - [ ] Actualizar README y ROADMAP a `benchmarked`.
 - [ ] Verificar y hacer commit: `feat: add btree chapter`.

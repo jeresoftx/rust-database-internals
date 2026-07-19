@@ -72,6 +72,54 @@ Los ejemplos del capítulo viven en `examples/` y se pueden ejecutar con
 Estos ejemplos no reemplazan las pruebas. Su función es contar la historia del
 mecanismo paso a paso, con nombres más cercanos al uso de un índice.
 
+## Ejercicios
+
+Los ejercicios están graduados para practicar una sola idea por vez. Las
+soluciones ejecutables viven en `examples/soluciones/`.
+
+### Nivel 1: Búsqueda
+
+Objetivo: confirmar la diferencia entre una clave existente y una clave
+ausente.
+
+Tareas:
+
+- crear un `BTree` con `max_keys_per_node = 3`;
+- insertar `Key(70)` con un `RecordPointer`;
+- verificar que `search(Key(70))` devuelve `Ok(Some(pointer))`;
+- verificar que `search(Key(71))` devuelve `Ok(None)`.
+
+Solución: `cargo run --example btree_search`.
+
+### Nivel 2: Inserción
+
+Objetivo: observar que insertar fuera de orden no rompe el orden interno.
+
+Tareas:
+
+- insertar las claves `30`, `10` y `20`;
+- verificar que `len` es `3`;
+- verificar que `height` sigue siendo `1`;
+- verificar con `leaf_keys` que la hoja queda como `[10, 20, 30]`;
+- intentar insertar otra vez `Key(20)` y confirmar
+  `BTreeError::DuplicateKey`.
+
+Solución: `cargo run --example btree_insert`.
+
+### Nivel 3: Split
+
+Objetivo: provocar el primer split de raíz y razonar sobre la clave separadora.
+
+Tareas:
+
+- insertar `10`, `20`, `30` y `40`;
+- verificar que `height` cambia a `2`;
+- verificar que `root_separator` devuelve `Some(Key(30))`;
+- verificar que las hojas quedan como `[10, 20]` y `[30, 40]`;
+- buscar `Key(40)` y confirmar que conserva su `RecordPointer`.
+
+Solución: `cargo run --example btree_split`.
+
 ## Invariantes De Orden
 
 Toda hoja conserva sus claves en orden estrictamente ascendente.
