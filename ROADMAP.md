@@ -45,6 +45,12 @@ con PostgreSQL sobre `xmin`, `xmax`, snapshots, aislamiento y vacuum. Su estado
 visible es `tested`: el bloque tiene modelo, pruebas, ejemplos y documentación,
 pero todavía no se marca como `reviewed` ni `published`.
 
+Write-Ahead Log ya cuenta con representación inicial de registros: LSN,
+transacción lógica, página lógica, imágenes `before`/`after` y operaciones
+`Begin`, `Update`, `Commit` y `Rollback`. Su estado visible es `draft`: el
+vocabulario existe, pero todavía faltan append-only log, redo, undo y la regla
+WAL completa.
+
 El checklist detallado vive en
 [`docs/superpowers/plans/2026-07-18-rust-database-internals-course.md`](docs/superpowers/plans/2026-07-18-rust-database-internals-course.md).
 
@@ -58,7 +64,7 @@ El checklist detallado vive en
 | 04 | Transacciones | benchmarked |
 | 05 | ACID | benchmarked |
 | 06 | MVCC | tested |
-| 07 | Write-Ahead Log | planned |
+| 07 | Write-Ahead Log | draft |
 | 08 | Recovery | planned |
 | 09 | Replicación | planned |
 | 10 | Query Optimizer | planned |
