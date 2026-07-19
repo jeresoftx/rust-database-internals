@@ -24,3 +24,8 @@ path = "examples/soluciones/btree_insert.rs"
 [[example]]
 name = "btree_split"
 path = "examples/soluciones/btree_split.rs"
+
+[[bench]]
+name = "btree_bench"
+path = "benches/btree_bench.rs"
+harness = false
