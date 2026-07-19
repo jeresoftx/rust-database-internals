@@ -165,7 +165,7 @@ soluciones y benchmark educativo completos. No se marca como `reviewed` ni
 - [x] Diseñar índices primarios y secundarios.
 - [x] Modelar índice único y no único.
 - [x] Modelar selectividad.
-- [ ] Documentar costo de lectura, escritura y mantenimiento.
+- [x] Documentar costo de lectura, escritura y mantenimiento.
 
 ## Task 4: Transacciones
 

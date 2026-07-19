@@ -55,6 +55,11 @@ de unicidad, selectividad o costo, el curso necesita separar dos roles:
 - Un índice no vacío con proporción menor que `0.3` se clasifica como `Low`.
 - `estimated_candidates_for` devuelve el número de primary keys asociadas a la
   llave buscada.
+- Un índice adicional puede reducir costo de lectura, pero agrega trabajo a
+  inserciones, actualizaciones y borrados.
+- Un índice único agrega validación de duplicados durante escritura.
+- Un índice no único puede dejar muchos candidatos cuando su selectividad es
+  baja.
 
 ## Decisión De Diseño
 
@@ -64,5 +69,5 @@ búsqueda no deberían inventar una segunda identidad de fila. Primero encuentra
 la identidad canónica; después esa identidad permite resolver la ubicación.
 
 El issue #24 agrega la primera regla de duplicados. El issue #25 agrega
-selectividad y estimación de candidatos. La implementación todavía no modela
-costo de mantenimiento; esa pieza queda para el issue #26.
+selectividad y estimación de candidatos. El issue #26 documenta costos de
+lectura, escritura, mantenimiento, ejemplos, ejercicios y benchmark manual.
