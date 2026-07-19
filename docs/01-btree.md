@@ -57,6 +57,21 @@ flowchart TD
     rightLeaf -. "RecordPointer por clave" .-> rightPointers["30 -> page 1 slot 30\n40 -> page 1 slot 40"]
 ```
 
+## Ejemplos Progresivos
+
+Los ejemplos del capítulo viven en `examples/` y se pueden ejecutar con
+`cargo run --example <nombre>`.
+
+| Ejemplo | Propósito |
+|---------|-----------|
+| `btree_basic` | Crear un árbol vacío y buscar una clave ausente. |
+| `btree_intermediate` | Insertar una clave y recuperar su `RecordPointer`. |
+| `btree_advanced` | Forzar el primer split de raíz y observar hojas. |
+| `btree_real_case` | Modelar un índice por primary key sobre registros. |
+
+Estos ejemplos no reemplazan las pruebas. Su función es contar la historia del
+mecanismo paso a paso, con nombres más cercanos al uso de un índice.
+
 ## Invariantes De Orden
 
 Toda hoja conserva sus claves en orden estrictamente ascendente.
