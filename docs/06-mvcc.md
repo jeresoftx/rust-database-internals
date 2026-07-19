@@ -2,9 +2,9 @@
 
 > **Estado:** draft.
 > **Alcance actual:** representación de versiones de registro, timestamps
-> lógicos, metadatos de visibilidad y snapshot reads básicos. Reglas completas
-> de visibilidad y comparación con PostgreSQL quedan para los siguientes pasos
-> del capítulo.
+> lógicos, metadatos de visibilidad, snapshot reads básicos y decisiones
+> explícitas de visibilidad por timestamp. La comparación con PostgreSQL queda
+> para el siguiente paso del capítulo.
 
 ## Por qué existe
 
@@ -44,6 +44,12 @@ v2 nace en t12 con saldo=120
 
 snapshot t11 lee v1
 snapshot t12 lee v2
+
+visibilidad de v1:
+t09 -> NotYetCreated
+t10 -> Visible
+t11 -> Visible
+t12 -> Deleted
 ```
 
 Una versión no se borra físicamente en este modelo inicial. Queda marcada con
@@ -62,6 +68,7 @@ El módulo `src/mvcc.rs` expone estos tipos:
 | `VersionId` | Identifica una versión dentro de una cadena. |
 | `LogicalTimestamp` | Ordena creación y cierre de versiones. |
 | `Snapshot` | Representa el timestamp lógico de una lectura. |
+| `VisibilityDecision` | Explica por qué una versión es visible o no en un timestamp. |
 | `RecordVersion` | Representa una versión concreta con metadatos de visibilidad. |
 | `VersionChain` | Agrupa versiones de un mismo registro lógico en orden de creación. |
 | `MvccError` | Nombra violaciones de invariantes del modelo. |
@@ -86,6 +93,8 @@ El modelo actual defiende estas reglas:
 - una versión deja de ser visible cuando `snapshot.read_at >= deleted_at`;
 - `VersionChain::read` devuelve la versión visible más reciente para el
   snapshot.
+- `RecordVersion::visibility_at` distingue `Visible`, `NotYetCreated` y
+  `Deleted`.
 
 Estas invariantes son pequeñas, pero fijan la frontera mental del capítulo. Una
 cadena de versiones desordenada vuelve ambiguas las lecturas por snapshot; una
@@ -158,10 +167,11 @@ Los ejemplos del capítulo viven en `examples/` y se pueden ejecutar con
 | `mvcc_basic` | Leer una primera versión con un snapshot simple. |
 | `mvcc_intermediate` | Comparar un snapshot antiguo contra uno nuevo después de una actualización. |
 | `mvcc_advanced` | Observar que un borrado lógico oculta una versión para snapshots nuevos. |
+| `mvcc_visibility` | Revisar los bordes `NotYetCreated`, `Visible` y `Deleted`. |
 
 ## Regla de snapshot read
 
-La regla actual es deliberadamente pequeña:
+La regla actual es deliberadamente explícita:
 
 ```text
 visible(version, snapshot) =
@@ -174,6 +184,22 @@ visible(version, snapshot) =
 devuelve la primera que cumple esa regla. Esto permite que un snapshot antiguo
 siga viendo una versión cerrada después, mientras un snapshot nuevo ve la
 versión actual o `None` si el registro fue borrado sin reemplazo.
+
+## Decisiones de visibilidad
+
+`RecordVersion::visibility_at` devuelve `VisibilityDecision`, no solo un
+booleano. Eso hace visible la razón de cada resultado:
+
+| Decisión | Significado |
+|----------|-------------|
+| `NotYetCreated` | La lectura ocurrió antes de `created_at`. |
+| `Visible` | La lectura cayó dentro de la ventana visible de la versión. |
+| `Deleted` | La lectura ocurrió en `deleted_at` o después. |
+
+Con `created_at = t10` y `deleted_at = t12`, la ventana visible es `[t10,
+t12)`: incluye el inicio, excluye el cierre. Esta frontera permite que una
+actualización cierre una versión vieja y cree una nueva en el mismo timestamp
+lógico sin que ambas sean visibles para el mismo snapshot.
 
 ## Lo que aún no hace
 
@@ -192,6 +218,5 @@ después se decide qué lector puede observar cada parte de esa historia.
 
 ## Siguiente paso natural
 
-El siguiente paso del capítulo es modelar visibilidad por timestamp lógico con
-un vocabulario más cercano a transacciones. Después se documentará la relación
-con PostgreSQL como comparación, sin volver el curso dependiente de PostgreSQL.
+El siguiente paso del capítulo es documentar la relación con PostgreSQL como
+comparación, sin volver el curso dependiente de PostgreSQL.

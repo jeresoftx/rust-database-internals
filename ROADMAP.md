@@ -39,9 +39,10 @@ Su estado visible es `benchmarked`: tiene medición educativa, pero todavía no
 se marca como `reviewed` ni `published`.
 
 MVCC ya cuenta con representación inicial de versiones de registro, timestamps
-lógicos, metadatos de visibilidad y snapshot reads básicos. Su estado visible
-es `draft`: el modelo de historia y lectura existe, pero todavía faltan reglas
-completas de visibilidad por timestamp y comparación con PostgreSQL.
+lógicos, metadatos de visibilidad, snapshot reads básicos y decisiones
+explícitas de visibilidad por timestamp. Su estado visible es `draft`: el
+modelo de historia y lectura existe, pero todavía falta la comparación con
+PostgreSQL.
 
 El checklist detallado vive en
 [`docs/superpowers/plans/2026-07-18-rust-database-internals-course.md`](docs/superpowers/plans/2026-07-18-rust-database-internals-course.md).
