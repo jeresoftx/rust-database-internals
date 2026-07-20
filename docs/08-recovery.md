@@ -1,10 +1,11 @@
 # Recovery
 
-> **Estado:** tested.
+> **Estado:** benchmarked.
 > **Alcance actual:** plan educativo de recovery para distinguir transacciones
 > confirmadas que requieren redo y transacciones con cambios no confirmados que
 > requieren undo después de una caída. Incluye replay educativo del WAL sobre
-> `PageStore` y documentación conceptual de checkpoints.
+> `PageStore`, ejercicios, soluciones, diagrama Mermaid, benchmark manual y
+> documentación conceptual de checkpoints.
 
 ## Por qué existe
 
@@ -114,6 +115,8 @@ flowchart TD
     UNDO --> UB
 ```
 
+Diagrama fuente: `diagrams/08-recovery.mmd`.
+
 ## Ejemplo básico
 
 ```rust
@@ -187,6 +190,16 @@ assert_eq!(report.undone_records(), 0);
 ```
 
 Ejemplo ejecutable: `cargo run --example recovery_replay_wal`.
+
+## Ejemplos progresivos
+
+Los ejemplos del capítulo viven en `examples/` y se pueden ejecutar con
+`cargo run --example <nombre>`.
+
+| Ejemplo | Propósito |
+|---------|-----------|
+| `recovery_crash_commit` | Comparar crash antes y después de `Commit`. |
+| `recovery_replay_wal` | Aplicar redo y undo sobre un `PageStore` educativo. |
 
 El orden inverso de undo importa cuando una transacción no confirmada modificó
 la misma página más de una vez:
@@ -263,6 +276,84 @@ checkpoint
 Este curso no implementa todavía una estructura `Checkpoint`. Lo importante en
 este capítulo es fijar el contrato mental: checkpoint no significa "ya no hay
 recovery"; significa "recovery puede empezar desde un punto más inteligente".
+
+## Ejercicios
+
+Los ejercicios refuerzan la lectura del WAL como historia durable. Primero se
+clasifica una transacción, después se rehace una confirmada y finalmente se
+deshace una incompleta en orden inverso.
+
+### Nivel 1: Clasificar crash antes y después de commit
+
+Construye un WAL con `Begin` y `Update` para `tx10`. Antes de agregar `Commit`,
+crea un `RecoveryPlan`; después agrega `Commit` y crea otro plan.
+
+La solución debe demostrar:
+
+- que antes de `Commit` la transacción requiere undo;
+- que después de `Commit` la transacción requiere redo;
+- que una transacción no debe aparecer en ambas listas al mismo tiempo.
+
+Solución ejecutable:
+
+```bash
+cargo run --example recovery_classify_crash
+```
+
+### Nivel 2: Rehacer una transacción confirmada
+
+Construye una transacción confirmada que cambia `saldo=100` a `saldo=120`.
+Inicializa `PageStore` con `saldo=100` y ejecuta `RecoveryPlan::replay`.
+
+La solución debe demostrar:
+
+- que el plan clasifica la transacción para redo;
+- que replay aplica la imagen `after`;
+- que `RecoveryReport` registra un redo y cero undo.
+
+Solución ejecutable:
+
+```bash
+cargo run --example recovery_replay_redo
+```
+
+### Nivel 3: Undo en orden inverso
+
+Construye una transacción no confirmada con dos updates sobre la misma página:
+`saldo=100 -> saldo=120` y `saldo=120 -> saldo=140`. Inicializa `PageStore`
+con `saldo=140` y ejecuta replay.
+
+La solución debe mostrar que:
+
+- la transacción incompleta requiere undo;
+- undo recorre el WAL hacia atrás;
+- el saldo final vuelve a `saldo=100`;
+- `RecoveryReport` registra cero redo y dos undo.
+
+Solución ejecutable:
+
+```bash
+cargo run --example recovery_undo_reverse
+```
+
+## Benchmark manual
+
+El benchmark del capítulo mide operaciones pequeñas y deliberadas:
+
+- análisis del WAL para construir `RecoveryPlan`;
+- replay con transacciones confirmadas;
+- replay con transacciones incompletas;
+- replay mixto con redo y undo.
+
+Ejecutar:
+
+```bash
+cargo bench --bench recovery_bench
+```
+
+El objetivo no es medir recovery real sobre disco. La medición conecta la regla
+conceptual con costos observables del modelo: analizar historia, recorrer hacia
+adelante para redo y recorrer hacia atrás para undo.
 
 ## Lo que aún no hace
 

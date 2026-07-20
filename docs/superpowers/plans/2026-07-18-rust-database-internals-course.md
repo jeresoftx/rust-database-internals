@@ -223,6 +223,11 @@ soluciones y benchmark educativo completos. No se marca como `reviewed` ni
 - [x] Modelar crash antes y después de commit.
 - [x] Modelar replay del WAL.
 - [x] Documentar checkpoints.
+- [x] Crear ejemplos progresivos de Recovery.
+- [x] Crear ejercicios y soluciones.
+- [x] Crear diagrama Mermaid de análisis, redo y undo.
+- [x] Crear benchmark de análisis, redo, undo y replay mixto.
+- [x] Actualizar README y ROADMAP a `benchmarked`.
 
 ## Task 9: Replicación
 
