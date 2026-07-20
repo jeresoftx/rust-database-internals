@@ -1,6 +1,7 @@
 use rust_database_internals::query_optimizer::{
-    ColumnName, ComparisonOperator, Literal, LogicalOperation, LogicalPlan, PhysicalAccessPath,
-    PhysicalOperation, PhysicalPlan, Predicate, QueryOptimizerError, RelationName,
+    ColumnName, ComparisonOperator, IndexName, Literal, LogicalOperation, LogicalPlan,
+    PhysicalAccessPath, PhysicalOperation, PhysicalPlan, Predicate, QueryOptimizerError,
+    RelationName,
 };
 
 #[test]
@@ -72,6 +73,43 @@ fn physical_plan_represents_execution_shape_separately_from_logical_plan() {
 }
 
 #[test]
+fn table_scan_represents_full_relation_access() {
+    let relation = RelationName::new("accounts").expect("relación válida");
+
+    let plan = PhysicalPlan::table_scan(relation.clone());
+
+    assert_eq!(
+        plan.operation(),
+        &PhysicalOperation::ReadRelation {
+            relation,
+            access_path: PhysicalAccessPath::TableScan,
+        }
+    );
+    assert!(plan.children().is_empty());
+}
+
+#[test]
+fn index_scan_represents_access_through_named_index() {
+    let relation = RelationName::new("accounts").expect("relación válida");
+    let index = IndexName::new("idx_accounts_status").expect("índice válido");
+    let lookup_column = ColumnName::new("status").expect("columna válida");
+
+    let plan = PhysicalPlan::index_scan(relation.clone(), index.clone(), lookup_column.clone());
+
+    assert_eq!(
+        plan.operation(),
+        &PhysicalOperation::ReadRelation {
+            relation,
+            access_path: PhysicalAccessPath::IndexScan {
+                index,
+                lookup_column,
+            },
+        }
+    );
+    assert!(plan.children().is_empty());
+}
+
+#[test]
 fn representation_rejects_blank_names_and_empty_projection() {
     assert_eq!(
         RelationName::new("   "),
@@ -80,6 +118,10 @@ fn representation_rejects_blank_names_and_empty_projection() {
     assert_eq!(
         ColumnName::new("   "),
         Err(QueryOptimizerError::BlankColumnName)
+    );
+    assert_eq!(
+        IndexName::new("   "),
+        Err(QueryOptimizerError::BlankIndexName)
     );
 
     let plan = LogicalPlan::relation(RelationName::new("accounts").expect("relación válida"));

@@ -5,8 +5,8 @@
 //! - plan lógico: qué quiere expresar la consulta;
 //! - plan físico: con qué forma de ejecución podría realizarse.
 //!
-//! La elección entre table scan, index scan y costo queda para pasos
-//! posteriores del capítulo.
+//! La estimación de costo y la elección automática entre alternativas quedan
+//! para pasos posteriores del capítulo.
 
 use std::{error::Error, fmt};
 
@@ -43,6 +43,28 @@ impl ColumnName {
 
         if value.is_empty() {
             return Err(QueryOptimizerError::BlankColumnName);
+        }
+
+        Ok(Self(value))
+    }
+
+    /// Devuelve el nombre como texto.
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+/// Nombre lógico de un índice disponible para ejecutar una consulta.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct IndexName(String);
+
+impl IndexName {
+    /// Crea un nombre de índice normalizado.
+    pub fn new(value: impl Into<String>) -> Result<Self, QueryOptimizerError> {
+        let value = normalize(value.into());
+
+        if value.is_empty() {
+            return Err(QueryOptimizerError::BlankIndexName);
         }
 
         Ok(Self(value))
@@ -199,6 +221,15 @@ impl LogicalPlan {
 pub enum PhysicalAccessPath {
     /// El optimizador todavía no eligió table scan ni index scan.
     Unchosen,
+    /// Leer todos los registros de una relación y filtrar después.
+    TableScan,
+    /// Leer mediante un índice nombrado sobre una columna de búsqueda.
+    IndexScan {
+        /// Índice usado para acceder a la relación.
+        index: IndexName,
+        /// Columna usada como llave de búsqueda en el índice.
+        lookup_column: ColumnName,
+    },
 }
 
 /// Operación dentro de un plan físico.
@@ -242,6 +273,22 @@ impl PhysicalPlan {
         }
     }
 
+    /// Crea una hoja física que lee toda la relación.
+    pub fn table_scan(relation: RelationName) -> Self {
+        Self::read_relation(relation, PhysicalAccessPath::TableScan)
+    }
+
+    /// Crea una hoja física que accede por un índice nombrado.
+    pub fn index_scan(relation: RelationName, index: IndexName, lookup_column: ColumnName) -> Self {
+        Self::read_relation(
+            relation,
+            PhysicalAccessPath::IndexScan {
+                index,
+                lookup_column,
+            },
+        )
+    }
+
     /// Agrega un filtro encima del plan actual.
     pub fn filter(self, predicate: Predicate) -> Self {
         Self {
@@ -280,6 +327,8 @@ pub enum QueryOptimizerError {
     BlankRelationName,
     /// El nombre de columna está vacío.
     BlankColumnName,
+    /// El nombre de índice está vacío.
+    BlankIndexName,
     /// Una proyección debe pedir al menos una columna.
     ProjectionRequiresColumns,
 }
@@ -289,6 +338,7 @@ impl fmt::Display for QueryOptimizerError {
         match self {
             Self::BlankRelationName => write!(f, "el nombre de relación no puede estar vacío"),
             Self::BlankColumnName => write!(f, "el nombre de columna no puede estar vacío"),
+            Self::BlankIndexName => write!(f, "el nombre de índice no puede estar vacío"),
             Self::ProjectionRequiresColumns => {
                 write!(f, "una proyección requiere al menos una columna")
             }
