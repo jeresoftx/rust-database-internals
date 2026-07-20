@@ -1,8 +1,9 @@
 # B-Tree
 
-> **Estado:** borrador técnico de invariantes.
+> **Estado:** benchmarked.
 > **Alcance actual:** representación, orden, fanout, altura, claves
-> separadoras, punteros, complejidad y modos de falla del modelo educativo.
+> separadoras, punteros, complejidad, modos de falla, ejemplos, ejercicios,
+> soluciones, diagrama Mermaid y benchmark manual del modelo educativo.
 
 ## Por Qué Existe
 

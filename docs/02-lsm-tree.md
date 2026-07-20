@@ -271,6 +271,7 @@ Este capítulo todavía no decide:
 
 ## Siguiente paso natural
 
-El siguiente paso natural del repo es corregir la marca pendiente de Índices en
-el checklist general o crear el siguiente issue de trazabilidad que mantenga el
-tablero de GitHub alineado con el estado real del curso.
+El siguiente paso natural del curso es una revisión humana completa del bloque
+`benchmarked`: validar tono, precisión pedagógica, ejercicios, soluciones,
+benchmarks y diagramas antes de decidir si algún capítulo puede pasar a
+`reviewed`.

@@ -420,5 +420,7 @@ Este capítulo todavía no decide:
 
 ## Siguiente paso natural
 
-El siguiente capítulo natural es Query Optimizer: diseñar una representación
-mínima de plan lógico y físico.
+El siguiente paso natural del curso es una revisión humana completa del bloque
+`benchmarked`: validar tono, precisión pedagógica, ejercicios, soluciones,
+benchmarks y diagramas antes de decidir si algún capítulo puede pasar a
+`reviewed`.
