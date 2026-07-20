@@ -1,0 +1,17 @@
+flowchart LR
+    P["primary-1<br/>acepta escrituras"]
+    PW["WAL primary<br/>LSN 1 update<br/>LSN 2 commit"]
+    L1["lag inicial<br/>2 pendientes"]
+    R["replica-1<br/>copia historia"]
+    RW["WAL replica<br/>LSN 1 update<br/>LSN 2 commit"]
+    L0["lag final<br/>0 pendientes"]
+    A["async<br/>confirma con lag"]
+    S["sync<br/>espera lag 0"]
+
+    P --> PW
+    PW --> L1
+    L1 --> R
+    R --> RW
+    RW --> L0
+    PW --> A
+    L0 --> S

@@ -114,6 +114,18 @@ name = "recovery_undo_reverse"
 path = "examples/soluciones/recovery_undo_reverse.rs"
 
 [[example]]
+name = "replication_copy_wal"
+path = "examples/soluciones/replication_copy_wal.rs"
+
+[[example]]
+name = "replication_measure_lag"
+path = "examples/soluciones/replication_measure_lag.rs"
+
+[[example]]
+name = "replication_ack_tradeoff"
+path = "examples/soluciones/replication_ack_tradeoff.rs"
+
+[[example]]
 name = "query_optimizer_table_scan"
 path = "examples/soluciones/query_optimizer_table_scan.rs"
 
@@ -163,6 +175,11 @@ harness = false
 [[bench]]
 name = "recovery_bench"
 path = "benches/recovery_bench.rs"
+harness = false
+
+[[bench]]
+name = "replication_bench"
+path = "benches/replication_bench.rs"
 harness = false
 
 [[bench]]
