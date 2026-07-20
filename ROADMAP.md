@@ -53,6 +53,12 @@ una página. Su estado visible es `tested`: el bloque tiene modelo, pruebas,
 ejemplos y documentación, pero todavía no se marca como `reviewed` ni
 `published`.
 
+Recovery ya cuenta con un primer plan educativo para interpretar el WAL después
+de una caída: transacciones con cambios y `Commit` se clasifican para redo, y
+transacciones con cambios sin `Commit` ni `Rollback` se clasifican para undo.
+Su estado visible es `draft`: el análisis inicial existe, pero todavía faltan
+replay del WAL y checkpoints.
+
 El checklist detallado vive en
 [`docs/superpowers/plans/2026-07-18-rust-database-internals-course.md`](docs/superpowers/plans/2026-07-18-rust-database-internals-course.md).
 
@@ -67,7 +73,7 @@ El checklist detallado vive en
 | 05 | ACID | benchmarked |
 | 06 | MVCC | tested |
 | 07 | Write-Ahead Log | tested |
-| 08 | Recovery | planned |
+| 08 | Recovery | draft |
 | 09 | Replicación | planned |
 | 10 | Query Optimizer | planned |
 

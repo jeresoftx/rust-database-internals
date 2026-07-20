@@ -1,8 +1,8 @@
 //! Registros educativos de Write-Ahead Log.
 //!
 //! Este módulo fija el vocabulario mínimo para hablar de WAL: cada registro
-//! tiene un LSN, una transacción lógica y una operación. Todavía no implementa
-//! un log append-only ni recovery; esos pasos vienen después.
+//! tiene un LSN, una transacción lógica y una operación. También modela un log
+//! append-only en memoria y un almacén educativo de páginas para redo y undo.
 
 use std::collections::BTreeMap;
 
