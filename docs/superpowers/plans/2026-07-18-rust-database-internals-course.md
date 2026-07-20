@@ -219,6 +219,6 @@ soluciones y benchmark educativo completos. No se marca como `reviewed` ni
 ## Task 10: Query Optimizer
 
 - [x] Diseñar representación de plan lógico y físico.
-- [ ] Modelar table scan e index scan.
+- [x] Modelar table scan e index scan.
 - [ ] Modelar estimación de costo.
 - [ ] Documentar por qué `EXPLAIN` existe en motores reales.
