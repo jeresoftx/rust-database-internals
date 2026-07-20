@@ -62,6 +62,12 @@ para acotar la lectura del WAL durante recovery. Su estado visible es `tested`:
 el bloque tiene modelo, pruebas, ejemplos y documentación, pero todavía no se
 marca como `reviewed` ni `published`.
 
+Replicación ya cuenta con un modelo inicial primary/replica: el primary acepta
+escrituras locales, las réplicas las rechazan y el cluster copia registros del
+WAL del primary hacia una réplica. Su estado visible es `draft`: el vocabulario
+y la copia ordenada existen, pero todavía faltan lag, confirmación síncrona o
+asíncrona y tradeoffs de consistencia.
+
 El checklist detallado vive en
 [`docs/superpowers/plans/2026-07-18-rust-database-internals-course.md`](docs/superpowers/plans/2026-07-18-rust-database-internals-course.md).
 
@@ -77,7 +83,7 @@ El checklist detallado vive en
 | 06 | MVCC | tested |
 | 07 | Write-Ahead Log | tested |
 | 08 | Recovery | tested |
-| 09 | Replicación | planned |
+| 09 | Replicación | draft |
 | 10 | Query Optimizer | planned |
 
 ## Alineación RFC-0001
