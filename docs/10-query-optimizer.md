@@ -2,8 +2,8 @@
 
 > **Estado:** draft.
 > **Alcance actual:** representación educativa de plan lógico y plan físico.
-> Incluye table scan e index scan como alternativas de acceso físico. Todavía
-> no modela estimación de costo ni relación con `EXPLAIN`.
+> Incluye table scan, index scan y estimación de costo. Todavía no documenta la
+> relación con `EXPLAIN`.
 
 ## Por qué existe
 
@@ -55,7 +55,7 @@ Project(id)
 La diferencia parece pequeña, pero es fundamental. El plan lógico dice "quiero
 estas columnas y este filtro". El plan físico empieza a hablar de ejecución:
 operadores, orden de trabajo y ruta de acceso. En este punto ya puede nombrar
-table scan e index scan, aunque todavía no decide cuál conviene.
+table scan e index scan, y compararlos con un costo estimado.
 
 ## Modelo Rust actual
 
@@ -73,12 +73,23 @@ plan.
 | `LogicalPlan` | Árbol de intención de consulta. |
 | `PhysicalPlan` | Árbol de forma de ejecución. |
 | `PhysicalAccessPath` | Ruta de acceso física elegida o pendiente de elegir. |
+| `CostCatalog` | Estadísticas mínimas de relaciones e índices. |
+| `RelationStatistics` | Conteo de filas de una relación. |
+| `IndexStatistics` | Selectividad de un índice. |
+| `PlanCost` | Filas leídas, filas producidas y unidades de trabajo. |
 
 `PhysicalAccessPath` reconoce tres estados:
 
 - `Unchosen`: el optimizador todavía no elige una ruta;
 - `TableScan`: leer toda la relación;
 - `IndexScan`: leer mediante un índice nombrado y una columna de búsqueda.
+
+La estimación de costo usa reglas deliberadamente pequeñas:
+
+- table scan lee todas las filas de la relación;
+- index scan lee las filas estimadas por selectividad;
+- index scan suma un costo fijo de búsqueda de índice;
+- el plan más barato es el de menor número de unidades de trabajo.
 
 ## Invariantes
 
@@ -90,7 +101,9 @@ plan.
 - un plan físico `Filter` o `Project` envuelve exactamente un hijo;
 - `PhysicalAccessPath::Unchosen` significa que el optimizador aún no eligió
   table scan ni index scan;
-- un index scan siempre nombra el índice usado y la columna de búsqueda.
+- un index scan siempre nombra el índice usado y la columna de búsqueda;
+- la selectividad de un índice debe estar entre 0 y 10_000 puntos base;
+- una ruta `Unchosen` no puede estimarse hasta elegir una alternativa física.
 
 ## Diagrama
 
@@ -102,7 +115,8 @@ flowchart TD
     A["access path<br/>unchosen"]
     T["table scan<br/>leer todo"]
     I["index scan<br/>leer por índice"]
-    C["costo<br/>pendiente"]
+    C["costo<br/>filas y trabajo"]
+    B["comparar<br/>menor costo"]
 
     SQL --> L
     L --> P
@@ -111,6 +125,7 @@ flowchart TD
     A --> I
     T --> C
     I --> C
+    C --> B
 ```
 
 ## Ejemplo básico
@@ -184,15 +199,51 @@ assert_eq!(
 # Ok::<(), rust_database_internals::query_optimizer::QueryOptimizerError>(())
 ```
 
+## Estimación de costo
+
+La estimación no intenta predecir un motor real. Sirve para practicar la idea
+central: un optimizador compara alternativas usando estadísticas.
+
+```rust
+use rust_database_internals::query_optimizer::{
+    ColumnName, CostCatalog, IndexName, IndexStatistics, PhysicalPlan, RelationName,
+    RelationStatistics, RowCount, Selectivity,
+};
+
+let relation = RelationName::new("accounts")?;
+let index = IndexName::new("idx_accounts_status")?;
+let catalog = CostCatalog::new(vec![RelationStatistics::new(
+    relation.clone(),
+    RowCount::new(10_000),
+)])
+.with_indexes(vec![IndexStatistics::new(
+    index.clone(),
+    Selectivity::new_basis_points(500)?,
+)]);
+
+let table_scan = PhysicalPlan::table_scan(relation.clone());
+let index_scan = PhysicalPlan::index_scan(
+    relation,
+    index,
+    ColumnName::new("status")?,
+);
+
+let table_cost = table_scan.estimate_cost(&catalog)?;
+let index_cost = index_scan.estimate_cost(&catalog)?;
+
+assert_eq!(table_cost.work_units(), 10_000);
+assert_eq!(index_cost.work_units(), 510);
+assert!(index_cost.is_cheaper_than(&table_cost));
+# Ok::<(), rust_database_internals::query_optimizer::QueryOptimizerError>(())
+```
+
 ## Lo que aún no hace
 
 Este borrador todavía no decide:
 
-- cómo estimar costo;
-- cómo elegir entre dos planes físicos;
 - cómo explicar una decisión con una salida similar a `EXPLAIN`.
 
 ## Siguiente paso natural
 
-El siguiente paso del capítulo es modelar estimación de costo para comparar
-planes físicos.
+El siguiente paso del capítulo es documentar por qué `EXPLAIN` existe en
+motores reales y cerrar ejemplos, ejercicios y benchmark del capítulo.

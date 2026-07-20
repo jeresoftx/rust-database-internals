@@ -76,9 +76,10 @@ Query Optimizer ya cuenta con una primera representación de plan lógico y plan
 físico. El plan lógico expresa intención de consulta: relación, selección y
 proyección. El plan físico separa forma de ejecución y ruta de acceso; ya puede
 nombrar `TableScan` e `IndexScan`, además de `Unchosen` cuando la decisión aún
-no se toma. Su estado visible es `draft`: el vocabulario central existe y está
-probado, pero todavía faltan estimación de costo, relación con `EXPLAIN`,
-ejemplos finales, ejercicios y benchmark.
+no se toma. También cuenta con un catálogo mínimo de estadísticas para estimar
+costo por filas leídas, filas producidas y unidades de trabajo. Su estado
+visible es `draft`: el vocabulario central existe y está probado, pero todavía
+faltan relación con `EXPLAIN`, ejemplos finales, ejercicios y benchmark.
 
 El checklist detallado vive en
 [`docs/superpowers/plans/2026-07-18-rust-database-internals-course.md`](docs/superpowers/plans/2026-07-18-rust-database-internals-course.md).

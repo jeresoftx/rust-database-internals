@@ -1,7 +1,7 @@
 use rust_database_internals::query_optimizer::{
-    ColumnName, ComparisonOperator, IndexName, Literal, LogicalOperation, LogicalPlan,
-    PhysicalAccessPath, PhysicalOperation, PhysicalPlan, Predicate, QueryOptimizerError,
-    RelationName,
+    ColumnName, ComparisonOperator, CostCatalog, IndexName, IndexStatistics, Literal,
+    LogicalOperation, LogicalPlan, PhysicalAccessPath, PhysicalOperation, PhysicalPlan, Predicate,
+    QueryOptimizerError, RelationName, RelationStatistics, RowCount, Selectivity,
 };
 
 #[test]
@@ -110,6 +110,76 @@ fn index_scan_represents_access_through_named_index() {
 }
 
 #[test]
+fn table_scan_cost_reads_every_row_in_relation() {
+    let relation = RelationName::new("accounts").expect("relación válida");
+    let catalog = CostCatalog::new(vec![RelationStatistics::new(
+        relation.clone(),
+        RowCount::new(10_000),
+    )]);
+    let plan = PhysicalPlan::table_scan(relation);
+
+    let cost = plan.estimate_cost(&catalog).expect("costo estimable");
+
+    assert_eq!(cost.rows_read(), 10_000);
+    assert_eq!(cost.rows_output(), 10_000);
+    assert_eq!(cost.work_units(), 10_000);
+}
+
+#[test]
+fn index_scan_cost_uses_index_selectivity() {
+    let relation = RelationName::new("accounts").expect("relación válida");
+    let index = IndexName::new("idx_accounts_status").expect("índice válido");
+    let catalog = CostCatalog::new(vec![RelationStatistics::new(
+        relation.clone(),
+        RowCount::new(10_000),
+    )])
+    .with_indexes(vec![IndexStatistics::new(
+        index.clone(),
+        Selectivity::new_basis_points(500).expect("selectividad válida"),
+    )]);
+    let plan = PhysicalPlan::index_scan(
+        relation,
+        index,
+        ColumnName::new("status").expect("columna válida"),
+    );
+
+    let cost = plan.estimate_cost(&catalog).expect("costo estimable");
+
+    assert_eq!(cost.rows_read(), 500);
+    assert_eq!(cost.rows_output(), 500);
+    assert_eq!(cost.work_units(), 510);
+}
+
+#[test]
+fn cheaper_cost_can_be_compared_between_physical_plans() {
+    let relation = RelationName::new("accounts").expect("relación válida");
+    let index = IndexName::new("idx_accounts_status").expect("índice válido");
+    let catalog = CostCatalog::new(vec![RelationStatistics::new(
+        relation.clone(),
+        RowCount::new(10_000),
+    )])
+    .with_indexes(vec![IndexStatistics::new(
+        index.clone(),
+        Selectivity::new_basis_points(500).expect("selectividad válida"),
+    )]);
+    let table_scan = PhysicalPlan::table_scan(relation.clone());
+    let index_scan = PhysicalPlan::index_scan(
+        relation,
+        index,
+        ColumnName::new("status").expect("columna válida"),
+    );
+
+    let table_cost = table_scan
+        .estimate_cost(&catalog)
+        .expect("table scan estimable");
+    let index_cost = index_scan
+        .estimate_cost(&catalog)
+        .expect("index scan estimable");
+
+    assert!(index_cost.is_cheaper_than(&table_cost));
+}
+
+#[test]
 fn representation_rejects_blank_names_and_empty_projection() {
     assert_eq!(
         RelationName::new("   "),
@@ -129,5 +199,9 @@ fn representation_rejects_blank_names_and_empty_projection() {
     assert_eq!(
         plan.project(vec![]),
         Err(QueryOptimizerError::ProjectionRequiresColumns)
+    );
+    assert_eq!(
+        Selectivity::new_basis_points(10_001),
+        Err(QueryOptimizerError::InvalidSelectivity)
     );
 }

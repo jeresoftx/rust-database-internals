@@ -5,10 +5,12 @@
 //! - plan lógico: qué quiere expresar la consulta;
 //! - plan físico: con qué forma de ejecución podría realizarse.
 //!
-//! La estimación de costo y la elección automática entre alternativas quedan
-//! para pasos posteriores del capítulo.
+//! La relación con `EXPLAIN`, ejemplos finales y benchmark quedan para pasos
+//! posteriores del capítulo.
 
 use std::{error::Error, fmt};
+
+const INDEX_PROBE_WORK_UNITS: u64 = 10;
 
 /// Nombre lógico de una relación consultable.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -318,6 +320,195 @@ impl PhysicalPlan {
     pub fn children(&self) -> &[PhysicalPlan] {
         &self.children
     }
+
+    /// Estima el costo educativo del plan físico.
+    pub fn estimate_cost(&self, catalog: &CostCatalog) -> Result<PlanCost, QueryOptimizerError> {
+        match &self.operation {
+            PhysicalOperation::ReadRelation {
+                relation,
+                access_path,
+            } => estimate_access_path_cost(relation, access_path, catalog),
+            PhysicalOperation::Filter { .. } | PhysicalOperation::Project { .. } => self
+                .children
+                .first()
+                .ok_or(QueryOptimizerError::PlanNodeRequiresChild)?
+                .estimate_cost(catalog),
+        }
+    }
+}
+
+/// Conteo de filas conocido o estimado para una relación.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RowCount(u64);
+
+impl RowCount {
+    /// Crea un conteo de filas.
+    pub const fn new(value: u64) -> Self {
+        Self(value)
+    }
+
+    /// Devuelve el conteo como entero.
+    pub const fn get(self) -> u64 {
+        self.0
+    }
+}
+
+/// Selectividad de un índice en puntos base.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Selectivity(u16);
+
+impl Selectivity {
+    /// Crea una selectividad entre 0 y 10_000 puntos base.
+    pub const fn new_basis_points(value: u16) -> Result<Self, QueryOptimizerError> {
+        if value > 10_000 {
+            return Err(QueryOptimizerError::InvalidSelectivity);
+        }
+
+        Ok(Self(value))
+    }
+
+    /// Devuelve los puntos base.
+    pub const fn basis_points(self) -> u16 {
+        self.0
+    }
+
+    fn estimate_rows(self, row_count: RowCount) -> u64 {
+        let rows = row_count.get();
+        let basis_points = u64::from(self.0);
+
+        if rows == 0 || basis_points == 0 {
+            return 0;
+        }
+
+        rows.saturating_mul(basis_points).div_ceil(10_000)
+    }
+}
+
+/// Estadísticas educativas de una relación.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RelationStatistics {
+    relation: RelationName,
+    row_count: RowCount,
+}
+
+impl RelationStatistics {
+    /// Crea estadísticas para una relación.
+    pub const fn new(relation: RelationName, row_count: RowCount) -> Self {
+        Self {
+            relation,
+            row_count,
+        }
+    }
+
+    /// Relación descrita.
+    pub const fn relation(&self) -> &RelationName {
+        &self.relation
+    }
+
+    /// Filas estimadas.
+    pub const fn row_count(&self) -> RowCount {
+        self.row_count
+    }
+}
+
+/// Estadísticas educativas de un índice.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IndexStatistics {
+    index: IndexName,
+    selectivity: Selectivity,
+}
+
+impl IndexStatistics {
+    /// Crea estadísticas para un índice.
+    pub const fn new(index: IndexName, selectivity: Selectivity) -> Self {
+        Self { index, selectivity }
+    }
+
+    /// Índice descrito.
+    pub const fn index(&self) -> &IndexName {
+        &self.index
+    }
+
+    /// Selectividad estimada.
+    pub const fn selectivity(&self) -> Selectivity {
+        self.selectivity
+    }
+}
+
+/// Catálogo mínimo de estadísticas para estimar costos.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CostCatalog {
+    relations: Vec<RelationStatistics>,
+    indexes: Vec<IndexStatistics>,
+}
+
+impl CostCatalog {
+    /// Crea un catálogo con estadísticas de relaciones.
+    pub fn new(relations: Vec<RelationStatistics>) -> Self {
+        Self {
+            relations,
+            indexes: vec![],
+        }
+    }
+
+    /// Agrega estadísticas de índices al catálogo.
+    pub fn with_indexes(mut self, indexes: Vec<IndexStatistics>) -> Self {
+        self.indexes = indexes;
+        self
+    }
+
+    /// Busca estadísticas de relación.
+    pub fn relation(&self, relation: &RelationName) -> Option<&RelationStatistics> {
+        self.relations
+            .iter()
+            .find(|statistics| statistics.relation() == relation)
+    }
+
+    /// Busca estadísticas de índice.
+    pub fn index(&self, index: &IndexName) -> Option<&IndexStatistics> {
+        self.indexes
+            .iter()
+            .find(|statistics| statistics.index() == index)
+    }
+}
+
+/// Costo educativo estimado para un plan físico.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PlanCost {
+    rows_read: u64,
+    rows_output: u64,
+    work_units: u64,
+}
+
+impl PlanCost {
+    /// Crea un costo estimado.
+    pub const fn new(rows_read: u64, rows_output: u64, work_units: u64) -> Self {
+        Self {
+            rows_read,
+            rows_output,
+            work_units,
+        }
+    }
+
+    /// Filas que el plan espera leer.
+    pub const fn rows_read(self) -> u64 {
+        self.rows_read
+    }
+
+    /// Filas que el plan espera producir.
+    pub const fn rows_output(self) -> u64 {
+        self.rows_output
+    }
+
+    /// Unidad abstracta de trabajo estimada.
+    pub const fn work_units(self) -> u64 {
+        self.work_units
+    }
+
+    /// Compara dos costos por trabajo estimado.
+    pub const fn is_cheaper_than(&self, other: &Self) -> bool {
+        self.work_units < other.work_units
+    }
 }
 
 /// Errores de representación del optimizador educativo.
@@ -331,6 +522,22 @@ pub enum QueryOptimizerError {
     BlankIndexName,
     /// Una proyección debe pedir al menos una columna.
     ProjectionRequiresColumns,
+    /// La selectividad debe estar entre 0 y 10_000 puntos base.
+    InvalidSelectivity,
+    /// Faltan estadísticas de la relación.
+    MissingRelationStatistics {
+        /// Relación sin estadísticas.
+        relation: RelationName,
+    },
+    /// Faltan estadísticas del índice.
+    MissingIndexStatistics {
+        /// Índice sin estadísticas.
+        index: IndexName,
+    },
+    /// No se puede estimar una ruta de acceso todavía no elegida.
+    CannotEstimateUnchosenAccessPath,
+    /// Un nodo físico calculable necesita un hijo.
+    PlanNodeRequiresChild,
 }
 
 impl fmt::Display for QueryOptimizerError {
@@ -342,6 +549,21 @@ impl fmt::Display for QueryOptimizerError {
             Self::ProjectionRequiresColumns => {
                 write!(f, "una proyección requiere al menos una columna")
             }
+            Self::InvalidSelectivity => {
+                write!(f, "la selectividad debe estar entre 0 y 10_000 puntos base")
+            }
+            Self::MissingRelationStatistics { relation } => write!(
+                f,
+                "faltan estadísticas de relación para '{}'",
+                relation.as_str()
+            ),
+            Self::MissingIndexStatistics { index } => {
+                write!(f, "faltan estadísticas de índice para '{}'", index.as_str())
+            }
+            Self::CannotEstimateUnchosenAccessPath => {
+                write!(f, "no se puede estimar una ruta de acceso sin elegir")
+            }
+            Self::PlanNodeRequiresChild => write!(f, "el nodo físico necesita un hijo"),
         }
     }
 }
@@ -350,4 +572,36 @@ impl Error for QueryOptimizerError {}
 
 fn normalize(value: String) -> String {
     value.trim().to_owned()
+}
+
+fn estimate_access_path_cost(
+    relation: &RelationName,
+    access_path: &PhysicalAccessPath,
+    catalog: &CostCatalog,
+) -> Result<PlanCost, QueryOptimizerError> {
+    let relation_statistics = catalog.relation(relation).ok_or_else(|| {
+        QueryOptimizerError::MissingRelationStatistics {
+            relation: relation.clone(),
+        }
+    })?;
+    let row_count = relation_statistics.row_count();
+
+    match access_path {
+        PhysicalAccessPath::Unchosen => Err(QueryOptimizerError::CannotEstimateUnchosenAccessPath),
+        PhysicalAccessPath::TableScan => {
+            let rows = row_count.get();
+            Ok(PlanCost::new(rows, rows, rows))
+        }
+        PhysicalAccessPath::IndexScan { index, .. } => {
+            let index_statistics = catalog.index(index).ok_or_else(|| {
+                QueryOptimizerError::MissingIndexStatistics {
+                    index: index.clone(),
+                }
+            })?;
+            let estimated_rows = index_statistics.selectivity().estimate_rows(row_count);
+            let work_units = INDEX_PROBE_WORK_UNITS.saturating_add(estimated_rows);
+
+            Ok(PlanCost::new(estimated_rows, estimated_rows, work_units))
+        }
+    }
 }
