@@ -50,9 +50,9 @@ Write-Ahead Log ya cuenta con representación inicial de registros: LSN,
 transacción lógica, página lógica, imágenes `before`/`after` y operaciones
 `Begin`, `Update`, `Commit` y `Rollback`. También incluye log append-only en
 memoria, redo, undo y la regla central de escribir el log antes de modificar
-una página. Su estado visible es `tested`: el bloque tiene modelo, pruebas,
-ejemplos y documentación, pero todavía no se marca como `reviewed` ni
-`published`.
+una página. Además cuenta con ejemplo de la regla WAL, ejercicios, soluciones,
+diagrama Mermaid y benchmark manual. Su estado visible es `benchmarked`: tiene
+medición educativa, pero todavía no se marca como `reviewed` ni `published`.
 
 Recovery ya cuenta con un primer plan educativo para interpretar el WAL después
 de una caída: transacciones con cambios y `Commit` se clasifican para redo, y
@@ -97,7 +97,7 @@ El checklist detallado vive en
 | 04 | Transacciones | benchmarked |
 | 05 | ACID | benchmarked |
 | 06 | MVCC | benchmarked |
-| 07 | Write-Ahead Log | tested |
+| 07 | Write-Ahead Log | benchmarked |
 | 08 | Recovery | tested |
 | 09 | Replicación | tested |
 | 10 | Query Optimizer | benchmarked |

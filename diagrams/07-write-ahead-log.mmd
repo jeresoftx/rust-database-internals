@@ -1,0 +1,12 @@
+flowchart LR
+    P0["PageStore<br/>saldo=100"]
+    B["LSN 1<br/>Begin tx10"]
+    U["LSN 2<br/>Update tx10<br/>before saldo=100<br/>after saldo=120"]
+    C["LSN 3<br/>Commit tx10"]
+    P1["PageStore<br/>saldo=120"]
+
+    P0 -. "estado antes" .-> U
+    B --> U
+    U --> C
+    U -. "redo aplica after" .-> P1
+    U -. "undo restaura before" .-> P0

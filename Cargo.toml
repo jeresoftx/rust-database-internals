@@ -90,6 +90,18 @@ name = "mvcc_logical_delete"
 path = "examples/soluciones/mvcc_logical_delete.rs"
 
 [[example]]
+name = "wal_append_order"
+path = "examples/soluciones/wal_append_order.rs"
+
+[[example]]
+name = "wal_redo_after"
+path = "examples/soluciones/wal_redo_after.rs"
+
+[[example]]
+name = "wal_rule_before_page"
+path = "examples/soluciones/wal_rule_before_page.rs"
+
+[[example]]
 name = "query_optimizer_table_scan"
 path = "examples/soluciones/query_optimizer_table_scan.rs"
 
@@ -129,6 +141,11 @@ harness = false
 [[bench]]
 name = "mvcc_bench"
 path = "benches/mvcc_bench.rs"
+harness = false
+
+[[bench]]
+name = "wal_bench"
+path = "benches/wal_bench.rs"
 harness = false
 
 [[bench]]
