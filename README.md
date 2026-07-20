@@ -42,7 +42,7 @@ pertenecen a la secuela propuesta `rust-database-systems`.
 | 04 | Transacciones | `src/transactions.rs` | benchmarked |
 | 05 | ACID | `src/acid.rs` | benchmarked |
 | 06 | MVCC | `src/mvcc.rs` | tested |
-| 07 | Write-Ahead Log | `src/wal.rs` | draft |
+| 07 | Write-Ahead Log | `src/wal.rs` | tested |
 | 08 | Recovery | `src/recovery.rs` | planned |
 | 09 | Replicación | `src/replication.rs` | planned |
 | 10 | Query Optimizer | `src/query_optimizer.rs` | planned |
