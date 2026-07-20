@@ -212,6 +212,11 @@ soluciones y benchmark educativo completos. No se marca como `reviewed` ni
 - [x] Modelar append-only log.
 - [x] Modelar redo y undo educativos.
 - [x] Documentar regla: escribir log antes de modificar página.
+- [x] Crear ejemplos progresivos de Write-Ahead Log.
+- [x] Crear ejercicios y soluciones.
+- [x] Crear diagrama Mermaid de secuencia WAL, redo y undo.
+- [x] Crear benchmark de append, redo, undo y validación de LSN.
+- [x] Actualizar README y ROADMAP a `benchmarked`.
 
 ## Task 8: Recovery
 

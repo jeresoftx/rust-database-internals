@@ -1,11 +1,12 @@
 # Write-Ahead Log
 
-> **Estado:** tested.
+> **Estado:** benchmarked.
 > **Alcance actual:** representación de registros WAL, LSN, transacción lógica,
 > página lógica, imagen antes/después, tipos de operación educativos y log
 > append-only en memoria. Incluye redo y undo educativos sobre un almacén de
 > páginas en memoria. Documenta la regla central: escribir el log antes de
-> modificar la página.
+> modificar la página. Incluye ejemplos progresivos, ejercicios, soluciones,
+> diagrama Mermaid y benchmark manual.
 
 ## Por qué existe
 
@@ -97,6 +98,8 @@ flowchart LR
 El diagrama muestra una historia, no un estado final. Esa distinción prepara el
 terreno para redo y undo: `after` permite rehacer, `before` permite deshacer.
 
+Diagrama fuente: `diagrams/07-write-ahead-log.mmd`.
+
 ## Ejemplo básico
 
 ```rust
@@ -151,6 +154,17 @@ assert_eq!(commit.value(), 3);
 ```
 
 Ejemplo ejecutable: `cargo run --example wal_append_only`.
+
+## Ejemplos progresivos
+
+Los ejemplos del capítulo viven en `examples/` y se pueden ejecutar con
+`cargo run --example <nombre>`.
+
+| Ejemplo | Propósito |
+|---------|-----------|
+| `wal_append_only` | Construir una historia `begin`, `update`, `commit` con LSN monótono. |
+| `wal_redo_undo` | Aplicar `after` con redo y restaurar `before` con undo. |
+| `wal_rule` | Escribir primero el registro WAL y después modificar la página. |
 
 ## Redo y undo educativos
 
@@ -249,6 +263,81 @@ aplicar after a PageStore -> todavía no existe WAL LSN 2
 Este modelo todavía no simula `fsync`, disco real ni política de buffer pool.
 La regla se enseña primero como invariante conceptual: la página no debe ir por
 delante de su explicación en el log.
+
+## Ejercicios
+
+Los ejercicios separan tres ideas que suelen mezclarse: orden de historia,
+rehacer un cambio y respetar la regla WAL.
+
+### Nivel 1: Orden append-only
+
+Construye un `WriteAheadLog`, agrega `Begin`, `Update` y `Commit` para la
+transacción `tx10`, y verifica que los LSN asignados sean `1`, `2` y `3`.
+
+La solución debe demostrar:
+
+- que el log asigna LSN monótono;
+- que las operaciones se recorren en orden de append;
+- que la historia no se reescribe.
+
+Solución ejecutable:
+
+```bash
+cargo run --example wal_append_order
+```
+
+### Nivel 2: Redo aplica `after`
+
+Crea un registro `Update` con `before = saldo=100` y `after = saldo=120`.
+Inicializa un `PageStore` con `before` y aplica redo.
+
+La solución debe demostrar:
+
+- que solo un registro `Update` contiene información de redo;
+- que redo escribe la imagen `after`;
+- que el estado de la página cambia a `saldo=120`.
+
+Solución ejecutable:
+
+```bash
+cargo run --example wal_redo_after
+```
+
+### Nivel 3: La regla WAL antes de la página
+
+Construye el flujo completo: página inicial, `Begin`, `Update` escrito en WAL y
+después aplicación de `after` en `PageStore`.
+
+La solución debe mostrar que:
+
+- antes del redo la página conserva `saldo=100`;
+- el registro `Update` ya existe en el WAL antes de modificar la página;
+- después del redo la página contiene `saldo=120`.
+
+Solución ejecutable:
+
+```bash
+cargo run --example wal_rule_before_page
+```
+
+## Benchmark manual
+
+El benchmark del capítulo mide operaciones pequeñas y deliberadas:
+
+- append de registros en un log en memoria;
+- redo de registros `Update`;
+- undo de registros `Update`;
+- rechazo de un registro con LSN inesperado.
+
+Ejecutar:
+
+```bash
+cargo bench --bench wal_bench
+```
+
+El objetivo no es medir disco real ni durabilidad física. La medición conecta
+la historia conceptual con costos observables del modelo: crecer el log, aplicar
+imágenes de página y defender el orden de LSN.
 
 ## Lo que aún no hace
 

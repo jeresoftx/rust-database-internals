@@ -42,7 +42,7 @@ pertenecen a la secuela propuesta `rust-database-systems`.
 | 04 | Transacciones | `src/transactions.rs` | benchmarked |
 | 05 | ACID | `src/acid.rs` | benchmarked |
 | 06 | MVCC | `src/mvcc.rs` | benchmarked |
-| 07 | Write-Ahead Log | `src/wal.rs` | tested |
+| 07 | Write-Ahead Log | `src/wal.rs` | benchmarked |
 | 08 | Recovery | `src/recovery.rs` | tested |
 | 09 | Replicación | `src/replication.rs` | tested |
 | 10 | Query Optimizer | `src/query_optimizer.rs` | benchmarked |
@@ -113,6 +113,7 @@ cargo bench --bench indexes_bench
 cargo bench --bench transactions_bench
 cargo bench --bench acid_bench
 cargo bench --bench mvcc_bench
+cargo bench --bench wal_bench
 cargo bench --bench query_optimizer_bench
 ```
 
