@@ -1,11 +1,11 @@
 # Replicación
 
-> **Estado:** draft.
+> **Estado:** tested.
 > **Alcance actual:** modelo educativo primary/replica. Solo el primary acepta
 > escrituras locales; las réplicas reciben copias ordenadas del WAL del primary.
 > Incluye medición educativa de lag por registros pendientes y últimos LSNs.
-> También modela confirmación asíncrona y síncrona. Todavía no cierra tradeoffs
-> de consistencia.
+> También modela confirmación asíncrona y síncrona, y documenta tradeoffs de
+> consistencia.
 
 ## Por qué existe
 
@@ -24,7 +24,9 @@ que preguntar:
 Este primer paso solo fija el vocabulario: primary, replica y copia ordenada de
 registros. El segundo paso agrega lag: una forma explícita de medir qué tan
 lejos está una réplica del WAL del primary. El tercer paso modela confirmación:
-cuándo una escritura se considera aceptada.
+cuándo una escritura se considera aceptada. El cuarto paso nombra el costo:
+cada decisión mueve el sistema entre latencia, disponibilidad y frescura de
+lecturas.
 
 ## Modelo mental
 
@@ -74,6 +76,10 @@ lag = 2 registros pendientes
 - `Async`: confirma cuando el primary aceptó la escritura;
 - `Sync`: confirma solo cuando las réplicas conocidas están al día.
 
+Los tradeoffs de consistencia se documentan como decisiones de lectura y
+confirmación. Este capítulo no implementa failover, quorum ni consenso; fija el
+mapa conceptual que esos sistemas expanden.
+
 ## Invariantes
 
 - un identificador de nodo no puede estar vacío;
@@ -87,7 +93,9 @@ lag = 2 registros pendientes
 - una réplica está al día cuando su número de registros coincide con el del
   primary;
 - confirmación asíncrona no espera a las réplicas;
-- confirmación síncrona espera si alguna réplica tiene registros pendientes.
+- confirmación síncrona espera si alguna réplica tiene registros pendientes;
+- leer desde una réplica puede devolver una vista atrasada si existe lag;
+- leer desde el primary favorece frescura, pero concentra carga en el primary.
 
 ## Diagrama
 
@@ -100,6 +108,7 @@ flowchart LR
     L["lag<br/>0 registros pendientes"]
     A["async<br/>confirma en primary"]
     S["sync<br/>espera lag 0"]
+    C["tradeoff<br/>latencia vs frescura"]
 
     P --> W
     W --> R
@@ -107,6 +116,8 @@ flowchart LR
     RW --> L
     W --> A
     L --> S
+    A --> C
+    S --> C
 ```
 
 ## Ejemplo básico
@@ -240,16 +251,83 @@ assert_eq!(
 
 Ejemplo ejecutable: `cargo run --example replication_ack_modes`.
 
+## Tradeoffs de consistencia
+
+Replicación no elimina decisiones difíciles. Las mueve a preguntas más
+explícitas:
+
+- ¿confirmo rápido o espero a las réplicas?
+- ¿leo desde el primary o desde una réplica?
+- ¿acepto una lectura posiblemente atrasada a cambio de menos carga?
+- ¿prefiero latencia baja o una historia más fresca?
+
+### Confirmación asíncrona
+
+En confirmación asíncrona, el primary responde cuando aceptó la escritura
+localmente. Es rápida, pero una réplica puede seguir atrasada:
+
+```text
+primary:
+  LSN 1 update
+  LSN 2 commit
+
+replica:
+  sin LSN 1 ni LSN 2 todavía
+
+cliente:
+  recibe "confirmado" aunque la réplica tenga lag
+```
+
+El beneficio es menor latencia. El costo es que una lectura desde réplica puede
+no ver todavía la escritura recién confirmada.
+
+### Confirmación síncrona
+
+En confirmación síncrona, el primary espera que las réplicas conocidas alcancen
+su WAL antes de confirmar:
+
+```text
+primary:
+  LSN 1 update
+  LSN 2 commit
+
+replica:
+  copia LSN 1
+  copia LSN 2
+
+cliente:
+  recibe "confirmado" después de que la réplica alcanza al primary
+```
+
+El beneficio es una historia más fresca en réplicas. El costo es más latencia y
+menor tolerancia a réplicas lentas.
+
+### Lecturas desde primary y lecturas desde réplicas
+
+Leer desde el primary favorece frescura: el cliente observa la historia que el
+nodo escritor ya aceptó. Leer desde una réplica distribuye carga, pero puede
+ver una versión atrasada si hay lag.
+
+| Decisión | Beneficio | Costo |
+|----------|-----------|-------|
+| Confirmación asíncrona | baja latencia de escritura | réplicas pueden ir atrasadas |
+| Confirmación síncrona | réplicas más frescas | mayor latencia de escritura |
+| Leer desde primary | lectura fresca | más carga en el primary |
+| Leer desde réplica | reparte carga de lectura | lectura puede ser stale |
+
+Este modelo no intenta resolver consenso. Solo enseña la tensión base: más
+frescura suele costar latencia o disponibilidad; más velocidad suele aceptar
+algún grado de atraso observable.
+
 ## Lo que aún no hace
 
-Este borrador todavía no decide:
+Este capítulo todavía no decide:
 
 - qué ocurre si una réplica pierde registros;
 - cómo elegir un nuevo primary;
-- cómo razonar sobre consistencia de lecturas desde réplicas.
+- cómo implementar quorum, consenso o failover automático.
 
 ## Siguiente paso natural
 
-El siguiente paso del capítulo es documentar tradeoffs de consistencia: qué se
-gana y qué se paga cuando se lee desde réplicas o se espera confirmación
-síncrona.
+El siguiente capítulo natural es Query Optimizer: diseñar una representación
+mínima de plan lógico y físico.
