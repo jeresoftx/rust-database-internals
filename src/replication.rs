@@ -3,7 +3,7 @@
 //! Este módulo inicia Replicación con el contrato más pequeño: solo el primary
 //! acepta escrituras locales y una réplica recibe copias ordenadas del WAL.
 
-use crate::wal::{LogOperation, WalError, WalTransactionId, WriteAheadLog};
+use crate::wal::{LogOperation, LogSequenceNumber, WalError, WalTransactionId, WriteAheadLog};
 
 /// Rol de un nodo dentro del modelo educativo de replicación.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -159,6 +159,24 @@ impl ReplicationCluster {
         self.replicas.iter().find(|replica| replica.id() == id)
     }
 
+    /// Mide cuántos registros del primary aún no tiene una réplica.
+    pub fn replica_lag(&self, replica_id: &str) -> Result<ReplicationLag, ReplicationError> {
+        let replica = self
+            .replica(replica_id)
+            .ok_or_else(|| ReplicationError::UnknownReplica {
+                node_id: replica_id.to_owned(),
+            })?;
+        let primary_records = self.primary.log.len();
+        let replica_records = replica.log.len();
+
+        Ok(ReplicationLag {
+            primary_records,
+            replica_records,
+            primary_last_lsn: self.primary.log.last_lsn(),
+            replica_last_lsn: replica.log.last_lsn(),
+        })
+    }
+
     /// Copia registros pendientes del primary hacia una réplica.
     pub fn replicate_to(
         &mut self,
@@ -174,6 +192,47 @@ impl ReplicationCluster {
         let copied_records = replica.copy_records_from(&self.primary)?;
 
         Ok(ReplicationReport { copied_records })
+    }
+}
+
+/// Atraso observable de una réplica respecto al primary.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ReplicationLag {
+    primary_records: usize,
+    replica_records: usize,
+    primary_last_lsn: Option<LogSequenceNumber>,
+    replica_last_lsn: Option<LogSequenceNumber>,
+}
+
+impl ReplicationLag {
+    /// Registros conocidos por el primary.
+    pub const fn primary_records(self) -> usize {
+        self.primary_records
+    }
+
+    /// Registros conocidos por la réplica.
+    pub const fn replica_records(self) -> usize {
+        self.replica_records
+    }
+
+    /// Registros pendientes de copiar hacia la réplica.
+    pub const fn pending_records(self) -> usize {
+        self.primary_records.saturating_sub(self.replica_records)
+    }
+
+    /// Último LSN conocido por el primary.
+    pub const fn primary_last_lsn(self) -> Option<LogSequenceNumber> {
+        self.primary_last_lsn
+    }
+
+    /// Último LSN conocido por la réplica.
+    pub const fn replica_last_lsn(self) -> Option<LogSequenceNumber> {
+        self.replica_last_lsn
+    }
+
+    /// Devuelve `true` cuando la réplica ya copió todo el WAL conocido.
+    pub const fn is_caught_up(self) -> bool {
+        self.pending_records() == 0
     }
 }
 
