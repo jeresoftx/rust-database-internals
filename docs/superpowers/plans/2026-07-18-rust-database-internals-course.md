@@ -220,5 +220,5 @@ soluciones y benchmark educativo completos. No se marca como `reviewed` ni
 
 - [x] Diseñar representación de plan lógico y físico.
 - [x] Modelar table scan e index scan.
-- [ ] Modelar estimación de costo.
+- [x] Modelar estimación de costo.
 - [ ] Documentar por qué `EXPLAIN` existe en motores reales.
