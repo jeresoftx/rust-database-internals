@@ -367,5 +367,7 @@ Este capítulo todavía no decide:
 
 ## Siguiente paso natural
 
-El siguiente paso natural fuera de este capítulo es volver al capítulo 02, LSM
-Tree, y revisar la marca del capítulo 03 en el checklist general.
+El siguiente paso natural del curso es una revisión humana completa del bloque
+`benchmarked`: validar tono, precisión pedagógica, ejercicios, soluciones,
+benchmarks y diagramas antes de decidir si algún capítulo puede pasar a
+`reviewed`.

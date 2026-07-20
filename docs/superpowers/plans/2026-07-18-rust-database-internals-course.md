@@ -92,6 +92,7 @@ Aplicación práctica:
 - [x] Desarrollar capítulo 08: Recovery.
 - [x] Desarrollar capítulo 09: Replicación.
 - [x] Desarrollar capítulo 10: Query Optimizer.
+- [x] Revisar consistencia final del estado `benchmarked` del curso.
 
 ## Task 1: B-Tree
 

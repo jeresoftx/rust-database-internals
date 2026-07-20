@@ -391,8 +391,7 @@ después se decide qué lector puede observar cada parte de esa historia.
 
 ## Siguiente paso natural
 
-El siguiente paso natural del repositorio es cerrar Write-Ahead Log con la
-misma anatomía pedagógica: ejemplos progresivos, ejercicios, soluciones,
-diagrama fuente y benchmark manual. WAL conecta con MVCC porque ayuda a
-responder qué cambios confirmados sobreviven a una falla y cómo se reconstruye
-la historia después de un crash.
+El siguiente paso natural del curso es una revisión humana completa del bloque
+`benchmarked`: validar tono, precisión pedagógica, ejercicios, soluciones,
+benchmarks y diagramas antes de decidir si algún capítulo puede pasar a
+`reviewed`.

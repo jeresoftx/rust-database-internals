@@ -350,6 +350,7 @@ Este capítulo todavía no decide:
 
 ## Siguiente paso natural
 
-El siguiente capítulo natural es Recovery: modelar qué ocurre cuando el sistema
-cae antes o después de `Commit`, cómo se recorre el WAL y por qué los
-checkpoints existen.
+El siguiente paso natural del curso es una revisión humana completa del bloque
+`benchmarked`: validar tono, precisión pedagógica, ejercicios, soluciones,
+benchmarks y diagramas antes de decidir si algún capítulo puede pasar a
+`reviewed`.
