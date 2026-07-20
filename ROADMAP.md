@@ -70,9 +70,9 @@ WAL del primary hacia una réplica. También mide lag como registros pendientes
 entre el primary y cada réplica, y modela confirmación asíncrona frente a
 confirmación síncrona. El capítulo documenta tradeoffs de consistencia entre
 latencia, frescura y carga de lectura al elegir confirmación y fuente de
-lectura. Su estado visible es `tested`: el bloque tiene modelo, pruebas,
-ejemplos y documentación, pero todavía no se marca como `reviewed` ni
-`published`.
+lectura. Además incluye ejercicios, soluciones, diagrama Mermaid y benchmark
+manual. Su estado visible es `benchmarked`: tiene medición educativa, pero
+todavía no se marca como `reviewed` ni `published`.
 
 Query Optimizer ya cuenta con una primera representación de plan lógico y plan
 físico. El plan lógico expresa intención de consulta: relación, selección y
@@ -100,7 +100,7 @@ El checklist detallado vive en
 | 06 | MVCC | benchmarked |
 | 07 | Write-Ahead Log | benchmarked |
 | 08 | Recovery | benchmarked |
-| 09 | Replicación | tested |
+| 09 | Replicación | benchmarked |
 | 10 | Query Optimizer | benchmarked |
 
 ## Alineación RFC-0001

@@ -235,6 +235,11 @@ soluciones y benchmark educativo completos. No se marca como `reviewed` ni
 - [x] Modelar lag.
 - [x] Modelar confirmación síncrona y asíncrona.
 - [x] Documentar tradeoffs de consistencia.
+- [x] Crear ejemplos progresivos de Replicación.
+- [x] Crear ejercicios y soluciones.
+- [x] Crear diagrama Mermaid de primary/replica, lag y confirmación.
+- [x] Crear benchmark de escritura, copia, lag y confirmación.
+- [x] Actualizar README y ROADMAP a `benchmarked`.
 
 ## Task 10: Query Optimizer
 

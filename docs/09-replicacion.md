@@ -1,11 +1,12 @@
 # Replicación
 
-> **Estado:** tested.
+> **Estado:** benchmarked.
 > **Alcance actual:** modelo educativo primary/replica. Solo el primary acepta
 > escrituras locales; las réplicas reciben copias ordenadas del WAL del primary.
 > Incluye medición educativa de lag por registros pendientes y últimos LSNs.
 > También modela confirmación asíncrona y síncrona, y documenta tradeoffs de
-> consistencia.
+> consistencia. Incluye ejercicios, soluciones, diagrama Mermaid y benchmark
+> manual.
 
 ## Por qué existe
 
@@ -120,6 +121,8 @@ flowchart LR
     S --> C
 ```
 
+Diagrama fuente: `diagrams/09-replicacion.mmd`.
+
 ## Ejemplo básico
 
 ```rust
@@ -155,6 +158,17 @@ assert_eq!(
 ```
 
 Ejemplo ejecutable: `cargo run --example replication_primary_replica`.
+
+## Ejemplos progresivos
+
+Los ejemplos del capítulo viven en `examples/` y se pueden ejecutar con
+`cargo run --example <nombre>`.
+
+| Ejemplo | Propósito |
+|---------|-----------|
+| `replication_primary_replica` | Copiar registros del WAL del primary hacia una réplica. |
+| `replication_lag` | Medir registros pendientes antes y después de replicar. |
+| `replication_ack_modes` | Comparar confirmación asíncrona y síncrona. |
 
 ## Lag
 
@@ -318,6 +332,83 @@ ver una versión atrasada si hay lag.
 Este modelo no intenta resolver consenso. Solo enseña la tensión base: más
 frescura suele costar latencia o disponibilidad; más velocidad suele aceptar
 algún grado de atraso observable.
+
+## Ejercicios
+
+Los ejercicios refuerzan el contrato del capítulo: una réplica no inventa
+historia, solo copia el WAL del primary; el lag vuelve observable el atraso; y
+la política de confirmación cambia la latencia percibida.
+
+### Nivel 1: Copiar WAL a una réplica
+
+Construye un primary con una actualización y un commit. Crea una réplica vacía,
+arma un `ReplicationCluster` y copia los registros pendientes hacia
+`replica-1`.
+
+La solución debe demostrar:
+
+- que el primary tiene dos registros;
+- que la réplica copia esos dos registros;
+- que el último LSN de la réplica coincide con el del primary.
+
+Solución ejecutable:
+
+```bash
+cargo run --example replication_copy_wal
+```
+
+### Nivel 2: Medir lag antes y después de replicar
+
+Usa el mismo cluster con una réplica atrasada. Mide `replica_lag` antes de
+copiar y después de copiar.
+
+La solución debe demostrar:
+
+- que antes de replicar hay dos registros pendientes;
+- que la réplica no está al día al inicio;
+- que después de replicar el lag baja a cero.
+
+Solución ejecutable:
+
+```bash
+cargo run --example replication_measure_lag
+```
+
+### Nivel 3: Comparar confirmación async y sync
+
+Construye un cluster con una réplica atrasada. Evalúa `Async` y `Sync` antes de
+copiar, luego replica y vuelve a evaluar `Sync`.
+
+La solución debe mostrar que:
+
+- `Async` confirma aunque exista lag;
+- `Sync` espera mientras la réplica tenga registros pendientes;
+- `Sync` confirma cuando la réplica alcanza al primary.
+
+Solución ejecutable:
+
+```bash
+cargo run --example replication_ack_tradeoff
+```
+
+## Benchmark manual
+
+El benchmark del capítulo mide operaciones pequeñas y deliberadas:
+
+- escrituras locales en primary;
+- copia del WAL hacia una réplica;
+- medición de lag;
+- confirmación síncrona cuando existe lag.
+
+Ejecutar:
+
+```bash
+cargo bench --bench replication_bench
+```
+
+El objetivo no es simular red real ni consenso distribuido. La medición conecta
+la idea conceptual con costos observables del modelo: producir historia,
+copiarla, medir atraso y decidir si una escritura puede confirmarse.
 
 ## Lo que aún no hace
 
