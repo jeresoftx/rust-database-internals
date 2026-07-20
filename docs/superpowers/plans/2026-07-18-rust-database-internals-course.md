@@ -133,6 +133,11 @@ Aplicación práctica:
 
 ### Registro De Verificación
 
+El issue #4 queda trazado por la especificación
+[`docs/superpowers/specs/2026-07-20-btree-empty-search.md`](../specs/2026-07-20-btree-empty-search.md).
+El test `search_in_empty_tree_returns_none` valida el contrato original: buscar
+en un B-Tree vacío devuelve `Ok(None)`.
+
 El cierre técnico de B-Tree se prepara en el issue #16. Antes de abrir el PR
 final del capítulo se ejecuta la batería completa:
 
