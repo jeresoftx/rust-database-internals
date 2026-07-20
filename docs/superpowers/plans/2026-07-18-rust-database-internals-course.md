@@ -90,7 +90,7 @@ Aplicación práctica:
 - [x] Desarrollar capítulo 06: MVCC.
 - [x] Desarrollar capítulo 07: Write-Ahead Log.
 - [x] Desarrollar capítulo 08: Recovery.
-- [ ] Desarrollar capítulo 09: Replicación.
+- [x] Desarrollar capítulo 09: Replicación.
 - [ ] Desarrollar capítulo 10: Query Optimizer.
 
 ## Task 1: B-Tree
@@ -214,7 +214,7 @@ soluciones y benchmark educativo completos. No se marca como `reviewed` ni
 - [x] Modelar primary/replica.
 - [x] Modelar lag.
 - [x] Modelar confirmación síncrona y asíncrona.
-- [ ] Documentar tradeoffs de consistencia.
+- [x] Documentar tradeoffs de consistencia.
 
 ## Task 10: Query Optimizer
 

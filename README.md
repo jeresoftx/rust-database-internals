@@ -44,7 +44,7 @@ pertenecen a la secuela propuesta `rust-database-systems`.
 | 06 | MVCC | `src/mvcc.rs` | tested |
 | 07 | Write-Ahead Log | `src/wal.rs` | tested |
 | 08 | Recovery | `src/recovery.rs` | tested |
-| 09 | Replicación | `src/replication.rs` | draft |
+| 09 | Replicación | `src/replication.rs` | tested |
 | 10 | Query Optimizer | `src/query_optimizer.rs` | planned |
 
 Estados posibles: `planned`, `draft`, `implemented`, `tested`,

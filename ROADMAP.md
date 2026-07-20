@@ -66,9 +66,11 @@ Replicación ya cuenta con un modelo inicial primary/replica: el primary acepta
 escrituras locales, las réplicas las rechazan y el cluster copia registros del
 WAL del primary hacia una réplica. También mide lag como registros pendientes
 entre el primary y cada réplica, y modela confirmación asíncrona frente a
-confirmación síncrona. Su estado visible es `draft`: el vocabulario, la copia
-ordenada, el lag y la confirmación existen, pero todavía faltan tradeoffs de
-consistencia.
+confirmación síncrona. El capítulo documenta tradeoffs de consistencia entre
+latencia, frescura y carga de lectura al elegir confirmación y fuente de
+lectura. Su estado visible es `tested`: el bloque tiene modelo, pruebas,
+ejemplos y documentación, pero todavía no se marca como `reviewed` ni
+`published`.
 
 El checklist detallado vive en
 [`docs/superpowers/plans/2026-07-18-rust-database-internals-course.md`](docs/superpowers/plans/2026-07-18-rust-database-internals-course.md).
@@ -85,7 +87,7 @@ El checklist detallado vive en
 | 06 | MVCC | tested |
 | 07 | Write-Ahead Log | tested |
 | 08 | Recovery | tested |
-| 09 | Replicación | draft |
+| 09 | Replicación | tested |
 | 10 | Query Optimizer | planned |
 
 ## Alineación RFC-0001
