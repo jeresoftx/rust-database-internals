@@ -78,6 +78,18 @@ name = "acid_durability_failure"
 path = "examples/soluciones/acid_durability_failure.rs"
 
 [[example]]
+name = "mvcc_snapshot_read"
+path = "examples/soluciones/mvcc_snapshot_read.rs"
+
+[[example]]
+name = "mvcc_visibility_window"
+path = "examples/soluciones/mvcc_visibility_window.rs"
+
+[[example]]
+name = "mvcc_logical_delete"
+path = "examples/soluciones/mvcc_logical_delete.rs"
+
+[[example]]
 name = "query_optimizer_table_scan"
 path = "examples/soluciones/query_optimizer_table_scan.rs"
 
@@ -112,6 +124,11 @@ harness = false
 [[bench]]
 name = "acid_bench"
 path = "benches/acid_bench.rs"
+harness = false
+
+[[bench]]
+name = "mvcc_bench"
+path = "benches/mvcc_bench.rs"
 harness = false
 
 [[bench]]

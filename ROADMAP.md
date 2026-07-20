@@ -41,9 +41,10 @@ se marca como `reviewed` ni `published`.
 MVCC ya cuenta con representación inicial de versiones de registro, timestamps
 lógicos, metadatos de visibilidad, snapshot reads básicos y decisiones
 explícitas de visibilidad por timestamp. También incluye comparación educativa
-con PostgreSQL sobre `xmin`, `xmax`, snapshots, aislamiento y vacuum. Su estado
-visible es `tested`: el bloque tiene modelo, pruebas, ejemplos y documentación,
-pero todavía no se marca como `reviewed` ni `published`.
+con PostgreSQL sobre `xmin`, `xmax`, snapshots, aislamiento y vacuum, además de
+ejemplos progresivos, ejercicios, soluciones, diagrama Mermaid y benchmark
+manual. Su estado visible es `benchmarked`: tiene medición educativa, pero
+todavía no se marca como `reviewed` ni `published`.
 
 Write-Ahead Log ya cuenta con representación inicial de registros: LSN,
 transacción lógica, página lógica, imágenes `before`/`after` y operaciones
@@ -95,7 +96,7 @@ El checklist detallado vive en
 | 03 | Índices | benchmarked |
 | 04 | Transacciones | benchmarked |
 | 05 | ACID | benchmarked |
-| 06 | MVCC | tested |
+| 06 | MVCC | benchmarked |
 | 07 | Write-Ahead Log | tested |
 | 08 | Recovery | tested |
 | 09 | Replicación | tested |

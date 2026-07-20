@@ -41,7 +41,7 @@ pertenecen a la secuela propuesta `rust-database-systems`.
 | 03 | Índices | `src/indexes.rs` | benchmarked |
 | 04 | Transacciones | `src/transactions.rs` | benchmarked |
 | 05 | ACID | `src/acid.rs` | benchmarked |
-| 06 | MVCC | `src/mvcc.rs` | tested |
+| 06 | MVCC | `src/mvcc.rs` | benchmarked |
 | 07 | Write-Ahead Log | `src/wal.rs` | tested |
 | 08 | Recovery | `src/recovery.rs` | tested |
 | 09 | Replicación | `src/replication.rs` | tested |
@@ -112,6 +112,7 @@ cargo bench --bench lsm_tree_bench
 cargo bench --bench indexes_bench
 cargo bench --bench transactions_bench
 cargo bench --bench acid_bench
+cargo bench --bench mvcc_bench
 cargo bench --bench query_optimizer_bench
 ```
 

@@ -200,6 +200,11 @@ soluciones y benchmark educativo completos. No se marca como `reviewed` ni
 - [x] Modelar snapshot reads.
 - [x] Modelar visibilidad por timestamp lógico.
 - [x] Documentar relación con PostgreSQL como comparación.
+- [x] Crear ejemplos progresivos de MVCC.
+- [x] Crear ejercicios y soluciones.
+- [x] Crear diagrama Mermaid de versiones y snapshot reads.
+- [x] Crear benchmark de append, lectura, visibilidad y borrado lógico.
+- [x] Actualizar README y ROADMAP a `benchmarked`.
 
 ## Task 7: Write-Ahead Log
 
