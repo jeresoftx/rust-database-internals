@@ -4,6 +4,73 @@
 //! tiene un LSN, una transacción lógica y una operación. Todavía no implementa
 //! un log append-only ni recovery; esos pasos vienen después.
 
+use std::collections::BTreeMap;
+
+/// Almacén educativo de páginas para aplicar redo y undo.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PageStore {
+    pages: BTreeMap<PageId, PageImage>,
+}
+
+impl PageStore {
+    /// Crea un almacén vacío.
+    pub fn new() -> Self {
+        Self {
+            pages: BTreeMap::new(),
+        }
+    }
+
+    /// Devuelve `true` cuando no hay páginas conocidas.
+    pub fn is_empty(&self) -> bool {
+        self.pages.is_empty()
+    }
+
+    /// Número de páginas conocidas.
+    pub fn len(&self) -> usize {
+        self.pages.len()
+    }
+
+    /// Escribe una imagen de página en el almacén.
+    pub fn write(&mut self, page_id: PageId, image: PageImage) {
+        self.pages.insert(page_id, image);
+    }
+
+    /// Lee la imagen actual de una página.
+    pub fn read(&self, page_id: &PageId) -> Option<&PageImage> {
+        self.pages.get(page_id)
+    }
+
+    /// Aplica redo usando la imagen `after` de un registro `Update`.
+    pub fn redo(&mut self, record: &LogRecord) -> Result<(), WalError> {
+        match record.operation() {
+            LogOperation::Update { page_id, after, .. } => {
+                self.write(page_id.clone(), after.clone());
+                Ok(())
+            }
+            _ => Err(WalError::NonRedoableRecord { lsn: record.lsn() }),
+        }
+    }
+
+    /// Aplica undo usando la imagen `before` de un registro `Update`.
+    pub fn undo(&mut self, record: &LogRecord) -> Result<(), WalError> {
+        match record.operation() {
+            LogOperation::Update {
+                page_id, before, ..
+            } => {
+                self.write(page_id.clone(), before.clone());
+                Ok(())
+            }
+            _ => Err(WalError::NonUndoableRecord { lsn: record.lsn() }),
+        }
+    }
+}
+
+impl Default for PageStore {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Log append-only que preserva registros WAL en orden de LSN.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WriteAheadLog {
@@ -313,6 +380,16 @@ pub enum WalError {
         expected: LogSequenceNumber,
         /// LSN encontrado en el registro.
         actual: LogSequenceNumber,
+    },
+    /// El registro no contiene información suficiente para redo.
+    NonRedoableRecord {
+        /// LSN del registro rechazado.
+        lsn: LogSequenceNumber,
+    },
+    /// El registro no contiene información suficiente para undo.
+    NonUndoableRecord {
+        /// LSN del registro rechazado.
+        lsn: LogSequenceNumber,
     },
 }
 

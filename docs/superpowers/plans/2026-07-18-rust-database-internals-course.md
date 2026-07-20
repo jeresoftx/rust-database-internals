@@ -200,7 +200,7 @@ soluciones y benchmark educativo completos. No se marca como `reviewed` ni
 
 - [x] Diseñar registros de log.
 - [x] Modelar append-only log.
-- [ ] Modelar redo y undo educativos.
+- [x] Modelar redo y undo educativos.
 - [ ] Documentar regla: escribir log antes de modificar página.
 
 ## Task 8: Recovery

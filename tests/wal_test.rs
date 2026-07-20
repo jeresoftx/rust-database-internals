@@ -1,6 +1,6 @@
 use rust_database_internals::wal::{
-    LogOperation, LogRecord, LogSequenceNumber, PageId, PageImage, WalError, WalTransactionId,
-    WriteAheadLog,
+    LogOperation, LogRecord, LogSequenceNumber, PageId, PageImage, PageStore, WalError,
+    WalTransactionId, WriteAheadLog,
 };
 
 #[test]
@@ -188,4 +188,97 @@ fn write_ahead_log_rejects_existing_record_with_unexpected_lsn() {
         })
     );
     assert!(log.is_empty());
+}
+
+#[test]
+fn page_store_starts_empty() {
+    let store = PageStore::new();
+    let page_id = PageId::new("heap/accounts/0001").expect("page id válido");
+
+    assert!(store.is_empty());
+    assert_eq!(store.len(), 0);
+    assert_eq!(store.read(&page_id), None);
+}
+
+#[test]
+fn page_store_can_write_and_read_page_image() {
+    let mut store = PageStore::new();
+    let page_id = PageId::new("heap/accounts/0001").expect("page id válido");
+    let image = PageImage::new("saldo=100").expect("imagen válida");
+
+    store.write(page_id.clone(), image.clone());
+
+    assert!(!store.is_empty());
+    assert_eq!(store.len(), 1);
+    assert_eq!(store.read(&page_id), Some(&image));
+}
+
+#[test]
+fn redo_update_writes_after_image() {
+    let mut store = PageStore::new();
+    let page_id = PageId::new("heap/accounts/0001").expect("page id válido");
+    let before = PageImage::new("saldo=100").expect("imagen válida");
+    let after = PageImage::new("saldo=120").expect("imagen válida");
+    let operation = LogOperation::update(page_id.clone(), before.clone(), after.clone())
+        .expect("update válido");
+    let record = LogRecord::new(
+        LogSequenceNumber::new(2),
+        WalTransactionId::new(10),
+        operation,
+    );
+    store.write(page_id.clone(), before);
+
+    store
+        .redo(&record)
+        .expect("redo de update debe escribir after");
+
+    assert_eq!(store.read(&page_id), Some(&after));
+}
+
+#[test]
+fn undo_update_writes_before_image() {
+    let mut store = PageStore::new();
+    let page_id = PageId::new("heap/accounts/0001").expect("page id válido");
+    let before = PageImage::new("saldo=100").expect("imagen válida");
+    let after = PageImage::new("saldo=120").expect("imagen válida");
+    let operation = LogOperation::update(page_id.clone(), before.clone(), after.clone())
+        .expect("update válido");
+    let record = LogRecord::new(
+        LogSequenceNumber::new(2),
+        WalTransactionId::new(10),
+        operation,
+    );
+    store.write(page_id.clone(), after);
+
+    store
+        .undo(&record)
+        .expect("undo de update debe escribir before");
+
+    assert_eq!(store.read(&page_id), Some(&before));
+}
+
+#[test]
+fn redo_rejects_non_redoable_record() {
+    let mut store = PageStore::new();
+    let record = LogRecord::commit(LogSequenceNumber::new(3), WalTransactionId::new(10));
+
+    assert_eq!(
+        store.redo(&record),
+        Err(WalError::NonRedoableRecord {
+            lsn: LogSequenceNumber::new(3),
+        })
+    );
+}
+
+#[test]
+fn undo_rejects_non_undoable_record() {
+    let mut store = PageStore::new();
+    let record = LogRecord::commit(LogSequenceNumber::new(3), WalTransactionId::new(10));
+
+    assert_eq!(
+        store.undo(&record),
+        Err(WalError::NonUndoableRecord {
+            lsn: LogSequenceNumber::new(3),
+        })
+    );
 }
