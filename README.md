@@ -37,7 +37,7 @@ pertenecen a la secuela propuesta `rust-database-systems`.
 | # | Capítulo | Módulo | Estado |
 |---|----------|--------|--------|
 | 01 | B-Tree | `src/btree.rs` | benchmarked |
-| 02 | LSM Tree | `src/lsm_tree.rs` | draft |
+| 02 | LSM Tree | `src/lsm_tree.rs` | benchmarked |
 | 03 | Índices | `src/indexes.rs` | benchmarked |
 | 04 | Transacciones | `src/transactions.rs` | benchmarked |
 | 05 | ACID | `src/acid.rs` | benchmarked |
@@ -108,6 +108,7 @@ Ejecutar benchmarks:
 
 ```bash
 cargo bench --bench btree_bench
+cargo bench --bench lsm_tree_bench
 cargo bench --bench indexes_bench
 cargo bench --bench transactions_bench
 cargo bench --bench acid_bench

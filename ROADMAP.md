@@ -15,10 +15,10 @@ ejercicios, soluciones y benchmark manual. Su estado visible es
 como `reviewed` ni `published` hasta completar la revisión humana del bloque.
 
 LSM Tree ya cuenta con API mínima, escrituras en memoria, flush, búsqueda,
-compaction educativa y un primer capítulo de tradeoffs frente a B-Tree. Su
-estado visible es `draft`: el mecanismo central existe, pero aún faltan
-ejemplos, ejercicios, soluciones, diagramas finales y benchmark educativo antes
-de elevarlo a `benchmarked`.
+compaction educativa y documentación de tradeoffs frente a B-Tree. También
+incluye ejemplos progresivos, ejercicios, soluciones, diagrama Mermaid y
+benchmark manual. Su estado visible es `benchmarked`: tiene medición
+educativa, pero todavía no se marca como `reviewed` ni `published`.
 
 Índices ya cuenta con representación de índice primario y secundario, reglas de
 unicidad, selectividad, documentación de costos, ejemplos progresivos,
@@ -91,7 +91,7 @@ El checklist detallado vive en
 | # | Capítulo | Estado |
 |---|----------|--------|
 | 01 | B-Tree | benchmarked |
-| 02 | LSM Tree | draft |
+| 02 | LSM Tree | benchmarked |
 | 03 | Índices | benchmarked |
 | 04 | Transacciones | benchmarked |
 | 05 | ACID | benchmarked |
