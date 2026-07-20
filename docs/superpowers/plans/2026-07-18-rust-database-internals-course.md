@@ -84,7 +84,7 @@ Aplicación práctica:
 - [x] Documentar milestones, labels y asignación obligatoria para PRs.
 - [x] Desarrollar capítulo 01: B-Tree.
 - [x] Desarrollar capítulo 02: LSM Tree.
-- [ ] Desarrollar capítulo 03: Índices.
+- [x] Desarrollar capítulo 03: Índices.
 - [x] Desarrollar capítulo 04: Transacciones.
 - [x] Desarrollar capítulo 05: ACID.
 - [x] Desarrollar capítulo 06: MVCC.
