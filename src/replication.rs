@@ -177,6 +177,37 @@ impl ReplicationCluster {
         })
     }
 
+    /// Decide si una escritura puede considerarse confirmada.
+    pub fn confirm_write(
+        &self,
+        mode: ReplicationAckMode,
+    ) -> Result<ReplicationDecision, ReplicationError> {
+        match mode {
+            ReplicationAckMode::Async => Ok(ReplicationDecision::Confirmed),
+            ReplicationAckMode::Sync => {
+                let mut pending_replicas = 0;
+                let mut pending_records = 0;
+
+                for replica in &self.replicas {
+                    let lag = self.replica_lag(replica.id())?;
+                    if !lag.is_caught_up() {
+                        pending_replicas += 1;
+                        pending_records += lag.pending_records();
+                    }
+                }
+
+                if pending_replicas == 0 {
+                    Ok(ReplicationDecision::Confirmed)
+                } else {
+                    Ok(ReplicationDecision::WaitingForReplicas {
+                        pending_replicas,
+                        pending_records,
+                    })
+                }
+            }
+        }
+    }
+
     /// Copia registros pendientes del primary hacia una réplica.
     pub fn replicate_to(
         &mut self,
@@ -193,6 +224,29 @@ impl ReplicationCluster {
 
         Ok(ReplicationReport { copied_records })
     }
+}
+
+/// Modo de confirmación de una escritura replicada.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ReplicationAckMode {
+    /// Confirmar cuando el primary aceptó la escritura localmente.
+    Async,
+    /// Confirmar solo cuando las réplicas conocidas alcanzaron al primary.
+    Sync,
+}
+
+/// Decisión educativa de confirmación.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ReplicationDecision {
+    /// La escritura puede considerarse confirmada.
+    Confirmed,
+    /// La escritura espera a que una o más réplicas alcancen al primary.
+    WaitingForReplicas {
+        /// Réplicas con registros pendientes.
+        pending_replicas: usize,
+        /// Total de registros pendientes entre esas réplicas.
+        pending_records: usize,
+    },
 }
 
 /// Atraso observable de una réplica respecto al primary.

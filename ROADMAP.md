@@ -65,9 +65,10 @@ marca como `reviewed` ni `published`.
 Replicación ya cuenta con un modelo inicial primary/replica: el primary acepta
 escrituras locales, las réplicas las rechazan y el cluster copia registros del
 WAL del primary hacia una réplica. También mide lag como registros pendientes
-entre el primary y cada réplica. Su estado visible es `draft`: el vocabulario,
-la copia ordenada y el lag existen, pero todavía faltan confirmación síncrona o
-asíncrona y tradeoffs de consistencia.
+entre el primary y cada réplica, y modela confirmación asíncrona frente a
+confirmación síncrona. Su estado visible es `draft`: el vocabulario, la copia
+ordenada, el lag y la confirmación existen, pero todavía faltan tradeoffs de
+consistencia.
 
 El checklist detallado vive en
 [`docs/superpowers/plans/2026-07-18-rust-database-internals-course.md`](docs/superpowers/plans/2026-07-18-rust-database-internals-course.md).

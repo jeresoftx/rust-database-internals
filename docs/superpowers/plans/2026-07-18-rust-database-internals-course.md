@@ -213,7 +213,7 @@ soluciones y benchmark educativo completos. No se marca como `reviewed` ni
 
 - [x] Modelar primary/replica.
 - [x] Modelar lag.
-- [ ] Modelar confirmación síncrona y asíncrona.
+- [x] Modelar confirmación síncrona y asíncrona.
 - [ ] Documentar tradeoffs de consistencia.
 
 ## Task 10: Query Optimizer
