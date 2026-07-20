@@ -211,7 +211,7 @@ soluciones y benchmark educativo completos. No se marca como `reviewed` ni
 
 ## Task 9: Replicación
 
-- [ ] Modelar primary/replica.
+- [x] Modelar primary/replica.
 - [ ] Modelar lag.
 - [ ] Modelar confirmación síncrona y asíncrona.
 - [ ] Documentar tradeoffs de consistencia.
