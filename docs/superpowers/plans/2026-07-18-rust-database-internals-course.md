@@ -88,7 +88,7 @@ Aplicación práctica:
 - [x] Desarrollar capítulo 04: Transacciones.
 - [x] Desarrollar capítulo 05: ACID.
 - [x] Desarrollar capítulo 06: MVCC.
-- [ ] Desarrollar capítulo 07: Write-Ahead Log.
+- [x] Desarrollar capítulo 07: Write-Ahead Log.
 - [ ] Desarrollar capítulo 08: Recovery.
 - [ ] Desarrollar capítulo 09: Replicación.
 - [ ] Desarrollar capítulo 10: Query Optimizer.
@@ -201,7 +201,7 @@ soluciones y benchmark educativo completos. No se marca como `reviewed` ni
 - [x] Diseñar registros de log.
 - [x] Modelar append-only log.
 - [x] Modelar redo y undo educativos.
-- [ ] Documentar regla: escribir log antes de modificar página.
+- [x] Documentar regla: escribir log antes de modificar página.
 
 ## Task 8: Recovery
 

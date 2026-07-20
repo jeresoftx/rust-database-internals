@@ -1,11 +1,11 @@
 # Write-Ahead Log
 
-> **Estado:** draft.
+> **Estado:** tested.
 > **Alcance actual:** representación de registros WAL, LSN, transacción lógica,
 > página lógica, imagen antes/después, tipos de operación educativos y log
 > append-only en memoria. Incluye redo y undo educativos sobre un almacén de
-> páginas en memoria. La regla completa de escribir log antes de modificar
-> página queda para el siguiente paso del capítulo.
+> páginas en memoria. Documenta la regla central: escribir el log antes de
+> modificar la página.
 
 ## Por qué existe
 
@@ -25,6 +25,9 @@ mezclen conceptos. El segundo paso agrega un log append-only en memoria:
 registros que entran al final, reciben LSN monótono y preservan orden.
 El tercer paso aplica esos registros sobre un almacén educativo de páginas:
 redo escribe `after`; undo restaura `before`.
+El cuarto paso nombra la regla que mantiene coherente todo el modelo: antes de
+modificar una página, el registro que describe ese cambio debe existir en el
+WAL.
 
 ## Modelo mental
 
@@ -68,11 +71,11 @@ El modelo actual defiende estas reglas:
 - un registro WAL siempre tiene LSN, transacción y operación;
 - solo `Update` es redoable y undoable en este modelo inicial;
 - `Begin`, `Commit` y `Rollback` nombran transiciones, pero no contienen delta
-  de página.
+  de página;
 - `WriteAheadLog` asigna LSN desde `1` de forma monótona;
 - `WriteAheadLog::append_record` rechaza registros cuyo LSN no coincide con el
   siguiente esperado;
-- los registros se recorren en el mismo orden en el que se agregaron.
+- los registros se recorren en el mismo orden en el que se agregaron;
 - `PageStore::redo` solo acepta registros `Update` y escribe la imagen `after`;
 - `PageStore::undo` solo acepta registros `Update` y escribe la imagen
   `before`;
@@ -188,15 +191,76 @@ Ejemplo ejecutable: `cargo run --example wal_redo_undo`.
 Este modelo no decide todavía si una transacción confirmó o abortó. Solo
 enseña que la información para rehacer y deshacer vive en el registro WAL.
 
+## Regla WAL
+
+La regla central de Write-Ahead Log es simple de decir y fácil de romper:
+
+```text
+antes de modificar una página, escribe primero el registro WAL que explica esa
+modificación.
+```
+
+En este curso, la regla se lee así:
+
+1. Construir una operación `Update` con `before` y `after`.
+2. Agregar esa operación a `WriteAheadLog` para asignarle un LSN.
+3. Solo después aplicar el cambio sobre `PageStore`.
+
+```rust
+use rust_database_internals::wal::{
+    LogOperation, PageId, PageImage, PageStore, WalTransactionId, WriteAheadLog,
+};
+
+let page_id = PageId::new("heap/accounts/0001")?;
+let before = PageImage::new("saldo=100")?;
+let after = PageImage::new("saldo=120")?;
+let tx = WalTransactionId::new(10);
+
+let mut log = WriteAheadLog::new();
+let mut store = PageStore::new();
+store.write(page_id.clone(), before.clone());
+
+log.append_begin(tx);
+let update = LogOperation::update(page_id.clone(), before.clone(), after.clone())?;
+let update_lsn = log.append(tx, update);
+
+let record = log.records().last().expect("el update ya fue escrito en WAL");
+store.redo(record)?;
+
+assert_eq!(update_lsn.value(), 2);
+assert_eq!(store.read(&page_id), Some(&after));
+# Ok::<(), rust_database_internals::wal::WalError>(())
+```
+
+El orden importa porque una página sin historia no se puede explicar después de
+una falla. Si el sistema cae antes de escribir la página, el WAL permite rehacer
+el cambio. Si cae después de modificarla, el WAL sigue siendo la historia
+canónica para que recovery razone sobre qué transacciones estaban completas y
+cuáles deben descartarse.
+
+```text
+correcto:
+append WAL LSN 2 -> aplicar after a PageStore
+
+peligroso:
+aplicar after a PageStore -> todavía no existe WAL LSN 2
+```
+
+Este modelo todavía no simula `fsync`, disco real ni política de buffer pool.
+La regla se enseña primero como invariante conceptual: la página no debe ir por
+delante de su explicación en el log.
+
 ## Lo que aún no hace
 
-Este borrador todavía no decide:
+Este capítulo todavía no decide:
 
 - cuándo un registro se considera durable;
-- cómo se relaciona la regla WAL con páginas sucias en buffer pool;
-- cómo se recupera el sistema después de un crash.
+- cómo se relaciona la regla WAL con páginas sucias en un buffer pool real;
+- cómo se recupera el sistema después de un crash;
+- cómo se compacta o resume la historia mediante checkpoints.
 
 ## Siguiente paso natural
 
-El siguiente paso del capítulo es documentar la regla central de WAL: escribir
-el log antes de modificar una página.
+El siguiente capítulo natural es Recovery: modelar qué ocurre cuando el sistema
+cae antes o después de `Commit`, cómo se recorre el WAL y por qué los
+checkpoints existen.
