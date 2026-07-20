@@ -45,7 +45,7 @@ pertenecen a la secuela propuesta `rust-database-systems`.
 | 07 | Write-Ahead Log | `src/wal.rs` | tested |
 | 08 | Recovery | `src/recovery.rs` | tested |
 | 09 | Replicación | `src/replication.rs` | tested |
-| 10 | Query Optimizer | `src/query_optimizer.rs` | draft |
+| 10 | Query Optimizer | `src/query_optimizer.rs` | benchmarked |
 
 Estados posibles: `planned`, `draft`, `implemented`, `tested`,
 `benchmarked`, `reviewed`, `published`.
@@ -111,6 +111,7 @@ cargo bench --bench btree_bench
 cargo bench --bench indexes_bench
 cargo bench --bench transactions_bench
 cargo bench --bench acid_bench
+cargo bench --bench query_optimizer_bench
 ```
 
 ## Gobernanza
