@@ -1,0 +1,13 @@
+flowchart LR
+    R["Registro lógico<br/>accounts/42"]
+    V1["v1<br/>created_at: t10<br/>deleted_at: t12<br/>saldo=100"]
+    V2["v2<br/>created_at: t12<br/>deleted_at: none<br/>saldo=120"]
+    S11["Snapshot t11"]
+    S12["Snapshot t12"]
+    S13["Snapshot t13"]
+
+    R --> V1
+    V1 --> V2
+    S11 -. "lee v1" .-> V1
+    S12 -. "lee v2" .-> V2
+    S13 -. "lee v2" .-> V2

@@ -1,10 +1,11 @@
 # MVCC
 
-> **Estado:** tested.
+> **Estado:** benchmarked.
 > **Alcance actual:** representación de versiones de registro, timestamps
 > lógicos, metadatos de visibilidad, snapshot reads básicos y decisiones
-> explícitas de visibilidad por timestamp. Incluye comparación educativa con
-> PostgreSQL sin convertirlo en dependencia del curso.
+> explícitas de visibilidad por timestamp. Incluye ejemplos progresivos,
+> ejercicios, soluciones, diagrama Mermaid, benchmark manual y comparación
+> educativa con PostgreSQL sin convertirlo en dependencia del curso.
 
 ## Por qué existe
 
@@ -122,6 +123,8 @@ otra. En un motor real, el cierre puede representarse con metadatos de
 transacción, timestamps, referencias a undo o reglas específicas del motor. En
 este curso lo reducimos a timestamps lógicos para que la idea sea visible.
 
+Diagrama fuente: `diagrams/06-mvcc.mmd`.
+
 ## Ejemplo básico
 
 ```rust
@@ -201,6 +204,82 @@ Con `created_at = t10` y `deleted_at = t12`, la ventana visible es `[t10,
 t12)`: incluye el inicio, excluye el cierre. Esta frontera permite que una
 actualización cierre una versión vieja y cree una nueva en el mismo timestamp
 lógico sin que ambas sean visibles para el mismo snapshot.
+
+## Ejercicios
+
+Los ejercicios están pensados para reforzar la regla de visibilidad antes de
+mezclar MVCC con transacciones reales, índices o WAL.
+
+### Nivel 1: Snapshot read básico
+
+Construye una `VersionChain` para `accounts/42`, agrega una versión en `t10` y
+lee con un `Snapshot` en `t10`.
+
+La solución debe demostrar:
+
+- que el snapshot encuentra una versión;
+- que el valor visible es `saldo=100`;
+- que el `VersionId` asignado es `1`.
+
+Solución ejecutable:
+
+```bash
+cargo run --example mvcc_snapshot_read
+```
+
+### Nivel 2: Ventana de visibilidad
+
+Crea una `RecordVersion` que nace en `t10`, ciérrala en `t12` y evalúa cuatro
+lecturas: `t9`, `t10`, `t11` y `t12`.
+
+La solución debe distinguir:
+
+- `NotYetCreated` antes de `t10`;
+- `Visible` en `t10` y `t11`;
+- `Deleted` desde `t12`.
+
+Solución ejecutable:
+
+```bash
+cargo run --example mvcc_visibility_window
+```
+
+### Nivel 3: Borrado lógico
+
+Agrega una versión en `t10`, ciérrala en `t12` y compara dos snapshots: uno en
+`t11` y otro en `t12`.
+
+La solución debe mostrar que:
+
+- un snapshot anterior al cierre todavía observa la versión;
+- un snapshot nuevo ya no ve el registro;
+- el borrado lógico no destruye inmediatamente la historia.
+
+Solución ejecutable:
+
+```bash
+cargo run --example mvcc_logical_delete
+```
+
+## Benchmark manual
+
+El benchmark del capítulo mide operaciones pequeñas y deliberadas:
+
+- append de versiones en una cadena;
+- snapshot reads sobre una cadena con historia;
+- decisiones explícitas de visibilidad;
+- borrado lógico de la versión más reciente.
+
+Ejecutar:
+
+```bash
+cargo bench --bench mvcc_bench
+```
+
+El objetivo no es competir contra PostgreSQL ni contra un motor real. La
+medición ayuda a conectar la regla conceptual con costos observables: leer un
+snapshot requiere buscar la versión visible; conservar historia tiene costo;
+cerrar una versión es distinto de borrarla físicamente.
 
 ## Comparación con PostgreSQL
 
@@ -312,6 +391,8 @@ después se decide qué lector puede observar cada parte de esa historia.
 
 ## Siguiente paso natural
 
-El siguiente paso del repositorio es abrir el capítulo 07: Write-Ahead Log. WAL
-conecta con MVCC porque ayuda a responder qué cambios confirmados sobreviven a
-una falla y cómo se reconstruye la historia después de un crash.
+El siguiente paso natural del repositorio es cerrar Write-Ahead Log con la
+misma anatomía pedagógica: ejemplos progresivos, ejercicios, soluciones,
+diagrama fuente y benchmark manual. WAL conecta con MVCC porque ayuda a
+responder qué cambios confirmados sobreviven a una falla y cómo se reconstruye
+la historia después de un crash.
