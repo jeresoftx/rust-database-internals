@@ -72,6 +72,13 @@ lectura. Su estado visible es `tested`: el bloque tiene modelo, pruebas,
 ejemplos y documentación, pero todavía no se marca como `reviewed` ni
 `published`.
 
+Query Optimizer ya cuenta con una primera representación de plan lógico y plan
+físico. El plan lógico expresa intención de consulta: relación, selección y
+proyección. El plan físico separa forma de ejecución y ruta de acceso, pero
+todavía deja esa ruta como `Unchosen` para no adelantar table scan, index scan
+ni estimación de costo. Su estado visible es `draft`: el vocabulario central
+existe y está probado, pero el capítulo aún no está completo.
+
 El checklist detallado vive en
 [`docs/superpowers/plans/2026-07-18-rust-database-internals-course.md`](docs/superpowers/plans/2026-07-18-rust-database-internals-course.md).
 
@@ -88,7 +95,7 @@ El checklist detallado vive en
 | 07 | Write-Ahead Log | tested |
 | 08 | Recovery | tested |
 | 09 | Replicación | tested |
-| 10 | Query Optimizer | planned |
+| 10 | Query Optimizer | draft |
 
 ## Alineación RFC-0001
 

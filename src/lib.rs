@@ -15,6 +15,7 @@ pub mod btree;
 pub mod indexes;
 pub mod lsm_tree;
 pub mod mvcc;
+pub mod query_optimizer;
 pub mod recovery;
 pub mod replication;
 pub mod transactions;
