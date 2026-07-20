@@ -91,7 +91,7 @@ Aplicación práctica:
 - [x] Desarrollar capítulo 07: Write-Ahead Log.
 - [x] Desarrollar capítulo 08: Recovery.
 - [x] Desarrollar capítulo 09: Replicación.
-- [ ] Desarrollar capítulo 10: Query Optimizer.
+- [x] Desarrollar capítulo 10: Query Optimizer.
 
 ## Task 1: B-Tree
 
@@ -221,4 +221,4 @@ soluciones y benchmark educativo completos. No se marca como `reviewed` ni
 - [x] Diseñar representación de plan lógico y físico.
 - [x] Modelar table scan e index scan.
 - [x] Modelar estimación de costo.
-- [ ] Documentar por qué `EXPLAIN` existe en motores reales.
+- [x] Documentar por qué `EXPLAIN` existe en motores reales.

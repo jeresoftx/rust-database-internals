@@ -65,6 +65,18 @@ path = "examples/soluciones/acid_isolation_failure.rs"
 name = "acid_durability_failure"
 path = "examples/soluciones/acid_durability_failure.rs"
 
+[[example]]
+name = "query_optimizer_table_scan"
+path = "examples/soluciones/query_optimizer_table_scan.rs"
+
+[[example]]
+name = "query_optimizer_index_scan"
+path = "examples/soluciones/query_optimizer_index_scan.rs"
+
+[[example]]
+name = "query_optimizer_cost_choice"
+path = "examples/soluciones/query_optimizer_cost_choice.rs"
+
 [[bench]]
 name = "btree_bench"
 path = "benches/btree_bench.rs"
@@ -83,4 +95,9 @@ harness = false
 [[bench]]
 name = "acid_bench"
 path = "benches/acid_bench.rs"
+harness = false
+
+[[bench]]
+name = "query_optimizer_bench"
+path = "benches/query_optimizer_bench.rs"
 harness = false

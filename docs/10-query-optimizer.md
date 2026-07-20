@@ -1,9 +1,9 @@
 # Query Optimizer
 
-> **Estado:** draft.
+> **Estado:** benchmarked.
 > **Alcance actual:** representación educativa de plan lógico y plan físico.
-> Incluye table scan, index scan y estimación de costo. Todavía no documenta la
-> relación con `EXPLAIN`.
+> Incluye table scan, index scan, estimación de costo, relación conceptual con
+> `EXPLAIN`, ejemplos, ejercicios y benchmark manual.
 
 ## Por qué existe
 
@@ -237,13 +237,135 @@ assert!(index_cost.is_cheaper_than(&table_cost));
 # Ok::<(), rust_database_internals::query_optimizer::QueryOptimizerError>(())
 ```
 
+## Por qué EXPLAIN existe
+
+Un motor real puede elegir un plan que no coincide con la intuición de quien
+escribió la consulta. `EXPLAIN` existe para abrir esa decisión.
+
+Sin una herramienta así, una consulta lenta queda como misterio:
+
+```text
+SELECT id, balance
+FROM accounts
+WHERE status = 'active';
+```
+
+El texto SQL no dice si el motor leyó toda la tabla, usó un índice, cuántas
+filas esperaba leer ni qué costo estimó. `EXPLAIN` muestra el plan que el motor
+decidió usar.
+
+En este capítulo, una salida conceptual puede verse así:
+
+```text
+Project(id, balance)
+  Filter(status = active)
+    IndexScan(accounts using idx_accounts_status)
+
+estimated rows read: 500
+estimated rows output: 500
+estimated work units: 510
+```
+
+La palabra importante es "estimated". Un optimizador no conoce el futuro:
+trabaja con estadísticas. Si las estadísticas están atrasadas, si la
+selectividad cambia o si la distribución real de datos está sesgada, el plan
+elegido puede ser peor de lo esperado.
+
+Por eso `EXPLAIN` no es solo una herramienta para "ver si usa índice". Es una
+forma de leer la hipótesis del motor:
+
+- qué relación lee;
+- qué ruta de acceso usa;
+- qué filtros aplica;
+- cuántas filas cree que leerá;
+- cuánto trabajo estima;
+- dónde podría estar equivocada su suposición.
+
+Este modelo educativo no implementa SQL ni reproduce la salida de PostgreSQL o
+MySQL. Solo fija el lenguaje necesario para entender por qué esos motores
+exponen planes.
+
+## Ejemplos Progresivos
+
+Los ejemplos del capítulo viven en `examples/` y se pueden ejecutar con
+`cargo run --example <nombre>`.
+
+| Ejemplo | Propósito |
+|---------|-----------|
+| `query_optimizer_basic` | Construir un plan lógico `Project -> Select -> ReadRelation`. |
+| `query_optimizer_intermediate` | Comparar rutas físicas `TableScan` e `IndexScan`. |
+| `query_optimizer_advanced` | Estimar costo y elegir el plan de menor trabajo. |
+
+## Ejercicios
+
+Los ejercicios están graduados para practicar una idea por vez. Las soluciones
+ejecutables viven en `examples/soluciones/`.
+
+### Nivel 1: Table Scan
+
+Objetivo: representar una lectura completa de relación.
+
+Tareas:
+
+- crear `RelationName::new("customers")`;
+- construir `PhysicalPlan::table_scan`;
+- confirmar que la ruta de acceso es `PhysicalAccessPath::TableScan`;
+- explicar por qué no necesita estadísticas de índice.
+
+Solución: `cargo run --example query_optimizer_table_scan`.
+
+### Nivel 2: Index Scan
+
+Objetivo: representar una lectura mediante índice nombrado.
+
+Tareas:
+
+- crear `RelationName::new("customers")`;
+- crear `IndexName::new("idx_customers_email")`;
+- crear `ColumnName::new("email")`;
+- construir `PhysicalPlan::index_scan`;
+- confirmar que el plan conserva índice y columna de búsqueda.
+
+Solución: `cargo run --example query_optimizer_index_scan`.
+
+### Nivel 3: Comparación de costo
+
+Objetivo: comparar table scan e index scan con estadísticas educativas.
+
+Tareas:
+
+- declarar `RowCount::new(50_000)`;
+- declarar selectividad de 20 puntos base para `idx_customers_email`;
+- estimar costo de table scan;
+- estimar costo de index scan;
+- confirmar que el index scan tiene menor número de unidades de trabajo;
+- explicar qué cambiaría si la selectividad fuera baja.
+
+Solución: `cargo run --example query_optimizer_cost_choice`.
+
+## Benchmark Manual
+
+El benchmark del capítulo mide el costo de estimar table scan, index scan y
+comparar ambos planes:
+
+```bash
+cargo bench --bench query_optimizer_bench
+```
+
+La medición no pretende evaluar un optimizador de producción. Sirve para
+conectar el modelo conceptual con operaciones repetibles y visibles.
+
 ## Lo que aún no hace
 
-Este borrador todavía no decide:
+Este capítulo todavía no decide:
 
-- cómo explicar una decisión con una salida similar a `EXPLAIN`.
+- cómo parsear SQL;
+- cómo transformar automáticamente un plan lógico en varios planes físicos;
+- cómo usar histogramas, cardinalidad por columna o correlación entre columnas;
+- cómo reproducir la salida exacta de `EXPLAIN` en PostgreSQL, MySQL u otro
+  motor real.
 
 ## Siguiente paso natural
 
-El siguiente paso del capítulo es documentar por qué `EXPLAIN` existe en
-motores reales y cerrar ejemplos, ejercicios y benchmark del capítulo.
+El siguiente paso natural fuera de este capítulo es volver al capítulo 02, LSM
+Tree, y revisar la marca del capítulo 03 en el checklist general.
