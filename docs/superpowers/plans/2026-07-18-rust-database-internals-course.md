@@ -89,7 +89,7 @@ Aplicación práctica:
 - [x] Desarrollar capítulo 05: ACID.
 - [x] Desarrollar capítulo 06: MVCC.
 - [x] Desarrollar capítulo 07: Write-Ahead Log.
-- [ ] Desarrollar capítulo 08: Recovery.
+- [x] Desarrollar capítulo 08: Recovery.
 - [ ] Desarrollar capítulo 09: Replicación.
 - [ ] Desarrollar capítulo 10: Query Optimizer.
 
@@ -207,7 +207,7 @@ soluciones y benchmark educativo completos. No se marca como `reviewed` ni
 
 - [x] Modelar crash antes y después de commit.
 - [x] Modelar replay del WAL.
-- [ ] Documentar checkpoints.
+- [x] Documentar checkpoints.
 
 ## Task 9: Replicación
 
