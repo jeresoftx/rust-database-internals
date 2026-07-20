@@ -59,9 +59,10 @@ de una caída: transacciones con cambios y `Commit` se clasifican para redo, y
 transacciones con cambios sin `Commit` ni `Rollback` se clasifican para undo.
 También incluye replay educativo sobre `PageStore`, con redo en orden de WAL y
 undo en orden inverso. El capítulo documenta checkpoints como puntos de partida
-para acotar la lectura del WAL durante recovery. Su estado visible es `tested`:
-el bloque tiene modelo, pruebas, ejemplos y documentación, pero todavía no se
-marca como `reviewed` ni `published`.
+para acotar la lectura del WAL durante recovery. Además incluye ejercicios,
+soluciones, diagrama Mermaid y benchmark manual. Su estado visible es
+`benchmarked`: tiene medición educativa, pero todavía no se marca como
+`reviewed` ni `published`.
 
 Replicación ya cuenta con un modelo inicial primary/replica: el primary acepta
 escrituras locales, las réplicas las rechazan y el cluster copia registros del
@@ -98,7 +99,7 @@ El checklist detallado vive en
 | 05 | ACID | benchmarked |
 | 06 | MVCC | benchmarked |
 | 07 | Write-Ahead Log | benchmarked |
-| 08 | Recovery | tested |
+| 08 | Recovery | benchmarked |
 | 09 | Replicación | tested |
 | 10 | Query Optimizer | benchmarked |
 

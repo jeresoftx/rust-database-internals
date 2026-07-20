@@ -1,0 +1,16 @@
+flowchart TD
+    S["Reinicio después de caída"]
+    W["Leer WAL disponible"]
+    A["Análisis<br/>clasificar transacciones"]
+    R["Redo forward<br/>tx confirmadas"]
+    U["Undo backward<br/>tx incompletas"]
+    REP["RecoveryReport<br/>redone / undone"]
+    CP["Checkpoint<br/>punto de partida conceptual"]
+
+    S --> W
+    W --> CP
+    CP --> A
+    A --> R
+    A --> U
+    R --> REP
+    U --> REP

@@ -102,6 +102,18 @@ name = "wal_rule_before_page"
 path = "examples/soluciones/wal_rule_before_page.rs"
 
 [[example]]
+name = "recovery_classify_crash"
+path = "examples/soluciones/recovery_classify_crash.rs"
+
+[[example]]
+name = "recovery_replay_redo"
+path = "examples/soluciones/recovery_replay_redo.rs"
+
+[[example]]
+name = "recovery_undo_reverse"
+path = "examples/soluciones/recovery_undo_reverse.rs"
+
+[[example]]
 name = "query_optimizer_table_scan"
 path = "examples/soluciones/query_optimizer_table_scan.rs"
 
@@ -146,6 +158,11 @@ harness = false
 [[bench]]
 name = "wal_bench"
 path = "benches/wal_bench.rs"
+harness = false
+
+[[bench]]
+name = "recovery_bench"
+path = "benches/recovery_bench.rs"
 harness = false
 
 [[bench]]
