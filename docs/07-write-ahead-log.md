@@ -2,9 +2,9 @@
 
 > **Estado:** draft.
 > **Alcance actual:** representación de registros WAL, LSN, transacción lógica,
-> página lógica, imagen antes/después y tipos de operación educativos.
-> Append-only log, redo, undo y la regla completa de escribir log antes de
-> modificar página quedan para los siguientes pasos del capítulo.
+> página lógica, imagen antes/después, tipos de operación educativos y log
+> append-only en memoria. Redo, undo y la regla completa de escribir log antes
+> de modificar página quedan para los siguientes pasos del capítulo.
 
 ## Por qué existe
 
@@ -19,8 +19,9 @@ La idea central es escribir primero una descripción durable del cambio y
 después modificar la página de datos. Por eso se llama *write-ahead*: el log va
 delante de la página.
 
-Este primer paso no implementa todavía un archivo append-only ni recovery. Solo
-fija el vocabulario mínimo para que los siguientes pasos no mezclen conceptos.
+El primer paso fija el vocabulario mínimo para que los siguientes pasos no
+mezclen conceptos. El segundo paso agrega un log append-only en memoria:
+registros que entran al final, reciben LSN monótono y preservan orden.
 
 ## Modelo mental
 
@@ -45,6 +46,7 @@ El módulo `src/wal.rs` expone estos tipos:
 | `PageImage` | Imagen educativa antes o después del cambio. |
 | `LogOperation` | Operación registrada: `Begin`, `Update`, `Commit`, `Rollback`. |
 | `LogRecord` | Registro WAL con LSN, transacción y operación. |
+| `WriteAheadLog` | Secuencia append-only de registros en orden de LSN. |
 | `WalError` | Errores de representación del modelo WAL. |
 
 El modelo usa texto para representar imágenes de página. Es deliberado: el
@@ -63,6 +65,10 @@ El modelo actual defiende estas reglas:
 - solo `Update` es redoable y undoable en este modelo inicial;
 - `Begin`, `Commit` y `Rollback` nombran transiciones, pero no contienen delta
   de página.
+- `WriteAheadLog` asigna LSN desde `1` de forma monótona;
+- `WriteAheadLog::append_record` rechaza registros cuyo LSN no coincide con el
+  siguiente esperado;
+- los registros se recorren en el mismo orden en el que se agregaron.
 
 ## Diagrama
 
@@ -103,12 +109,41 @@ assert!(record.is_undoable());
 # Ok::<(), rust_database_internals::wal::WalError>(())
 ```
 
+## Append-only log
+
+Un WAL append-only no reescribe su historia. Agrega registros al final y
+mantiene el orden. En este modelo, `WriteAheadLog` asigna el siguiente LSN al
+hacer `append`:
+
+```rust
+use rust_database_internals::wal::{
+    LogOperation, PageId, PageImage, WalTransactionId, WriteAheadLog,
+};
+
+let mut log = WriteAheadLog::new();
+let tx = WalTransactionId::new(10);
+
+let begin = log.append_begin(tx);
+let update = LogOperation::update(
+    PageId::new("heap/accounts/0001")?,
+    PageImage::new("saldo=100")?,
+    PageImage::new("saldo=120")?,
+)?;
+let update_lsn = log.append(tx, update);
+let commit = log.append_commit(tx);
+
+assert_eq!(begin.value(), 1);
+assert_eq!(update_lsn.value(), 2);
+assert_eq!(commit.value(), 3);
+# Ok::<(), rust_database_internals::wal::WalError>(())
+```
+
+Ejemplo ejecutable: `cargo run --example wal_append_only`.
+
 ## Lo que aún no hace
 
 Este borrador todavía no decide:
 
-- cómo se agregan registros a un log append-only;
-- cómo se impide insertar un LSN fuera de orden;
 - cuándo un registro se considera durable;
 - cómo se aplica redo;
 - cómo se aplica undo;
@@ -117,6 +152,5 @@ Este borrador todavía no decide:
 
 ## Siguiente paso natural
 
-El siguiente paso del capítulo es modelar un append-only log: una estructura
-que asigne LSN de forma monótona, preserve orden de escritura y permita
-recorrer la historia registrada.
+El siguiente paso del capítulo es modelar redo y undo educativos usando las
+imágenes `after` y `before` que ya viven en cada registro `Update`.
