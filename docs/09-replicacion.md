@@ -4,7 +4,8 @@
 > **Alcance actual:** modelo educativo primary/replica. Solo el primary acepta
 > escrituras locales; las réplicas reciben copias ordenadas del WAL del primary.
 > Incluye medición educativa de lag por registros pendientes y últimos LSNs.
-> Todavía no modela confirmación síncrona/asíncrona ni tradeoffs de consistencia.
+> También modela confirmación asíncrona y síncrona. Todavía no cierra tradeoffs
+> de consistencia.
 
 ## Por qué existe
 
@@ -22,7 +23,8 @@ que preguntar:
 
 Este primer paso solo fija el vocabulario: primary, replica y copia ordenada de
 registros. El segundo paso agrega lag: una forma explícita de medir qué tan
-lejos está una réplica del WAL del primary.
+lejos está una réplica del WAL del primary. El tercer paso modela confirmación:
+cuándo una escritura se considera aceptada.
 
 ## Modelo mental
 
@@ -48,6 +50,8 @@ El módulo `src/replication.rs` expone estos tipos:
 | `ReplicationRole` | Rol del nodo: `Primary` o `Replica`. |
 | `ReplicationNode` | Nodo con identificador, rol y WAL local. |
 | `ReplicationCluster` | Conjunto educativo con un primary y réplicas. |
+| `ReplicationAckMode` | Modo de confirmación: `Async` o `Sync`. |
+| `ReplicationDecision` | Decisión de confirmación: confirmada o esperando réplicas. |
 | `ReplicationLag` | Atraso observable de una réplica respecto al primary. |
 | `ReplicationReport` | Resultado de copiar registros hacia una réplica. |
 | `ReplicationError` | Errores del modelo de replicación. |
@@ -65,6 +69,11 @@ replica tiene 0 registros
 lag = 2 registros pendientes
 ```
 
+`ReplicationCluster::confirm_write` modela dos políticas:
+
+- `Async`: confirma cuando el primary aceptó la escritura;
+- `Sync`: confirma solo cuando las réplicas conocidas están al día.
+
 ## Invariantes
 
 - un identificador de nodo no puede estar vacío;
@@ -76,7 +85,9 @@ lag = 2 registros pendientes
 - la copia hacia una réplica preserva el orden de LSN del primary;
 - el lag baja cuando la réplica copia registros del primary;
 - una réplica está al día cuando su número de registros coincide con el del
-  primary.
+  primary;
+- confirmación asíncrona no espera a las réplicas;
+- confirmación síncrona espera si alguna réplica tiene registros pendientes.
 
 ## Diagrama
 
@@ -87,11 +98,15 @@ flowchart LR
     R["replica-1<br/>recibe copia"]
     RW["WAL replica<br/>LSN 1 update<br/>LSN 2 commit"]
     L["lag<br/>0 registros pendientes"]
+    A["async<br/>confirma en primary"]
+    S["sync<br/>espera lag 0"]
 
     P --> W
     W --> R
     R --> RW
     RW --> L
+    W --> A
+    L --> S
 ```
 
 ## Ejemplo básico
@@ -171,16 +186,70 @@ assert!(after.is_caught_up());
 
 Ejemplo ejecutable: `cargo run --example replication_lag`.
 
+## Confirmación
+
+Confirmar una escritura no siempre significa lo mismo. En modo asíncrono, el
+primary responde en cuanto acepta la escritura local. En modo síncrono, el
+primary espera que las réplicas conocidas alcancen su WAL.
+
+```rust
+use rust_database_internals::{
+    replication::{
+        ReplicationAckMode, ReplicationCluster, ReplicationDecision,
+        ReplicationNode,
+    },
+    wal::{LogOperation, PageId, PageImage, WalTransactionId},
+};
+
+let mut primary = ReplicationNode::primary("primary-1")?;
+let tx = WalTransactionId::new(10);
+
+primary.append_local_update(
+    tx,
+    LogOperation::update(
+        PageId::new("heap/accounts/0001")?,
+        PageImage::new("saldo=100")?,
+        PageImage::new("saldo=120")?,
+    )?,
+)?;
+primary.append_local_commit(tx)?;
+
+let replica = ReplicationNode::replica("replica-1")?;
+let mut cluster = ReplicationCluster::new(primary, vec![replica])?;
+
+assert_eq!(
+    cluster.confirm_write(ReplicationAckMode::Async)?,
+    ReplicationDecision::Confirmed
+);
+assert_eq!(
+    cluster.confirm_write(ReplicationAckMode::Sync)?,
+    ReplicationDecision::WaitingForReplicas {
+        pending_replicas: 1,
+        pending_records: 2,
+    }
+);
+
+cluster.replicate_to("replica-1")?;
+
+assert_eq!(
+    cluster.confirm_write(ReplicationAckMode::Sync)?,
+    ReplicationDecision::Confirmed
+);
+# Ok::<(), rust_database_internals::replication::ReplicationError>(())
+```
+
+Ejemplo ejecutable: `cargo run --example replication_ack_modes`.
+
 ## Lo que aún no hace
 
 Este borrador todavía no decide:
 
-- cómo confirmar escrituras de forma síncrona o asíncrona;
 - qué ocurre si una réplica pierde registros;
 - cómo elegir un nuevo primary;
 - cómo razonar sobre consistencia de lecturas desde réplicas.
 
 ## Siguiente paso natural
 
-El siguiente paso del capítulo es modelar confirmación síncrona y asíncrona:
-cuándo una escritura se considera aceptada si las réplicas van por detrás.
+El siguiente paso del capítulo es documentar tradeoffs de consistencia: qué se
+gana y qué se paga cuando se lee desde réplicas o se espera confirmación
+síncrona.

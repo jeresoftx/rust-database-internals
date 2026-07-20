@@ -1,5 +1,8 @@
 use rust_database_internals::{
-    replication::{ReplicationCluster, ReplicationError, ReplicationNode, ReplicationRole},
+    replication::{
+        ReplicationAckMode, ReplicationCluster, ReplicationDecision, ReplicationError,
+        ReplicationNode, ReplicationRole,
+    },
     wal::{LogOperation, PageId, PageImage, WalTransactionId},
 };
 
@@ -134,6 +137,43 @@ fn cluster_rejects_lag_for_unknown_replica() {
     );
 }
 
+#[test]
+fn async_confirmation_accepts_write_with_replica_lag() {
+    let cluster = cluster_with_lagged_replica();
+
+    let decision = cluster
+        .confirm_write(ReplicationAckMode::Async)
+        .expect("confirmación válida");
+
+    assert_eq!(decision, ReplicationDecision::Confirmed);
+}
+
+#[test]
+fn sync_confirmation_waits_until_replicas_catch_up() {
+    let mut cluster = cluster_with_lagged_replica();
+
+    let pending = cluster
+        .confirm_write(ReplicationAckMode::Sync)
+        .expect("confirmación válida");
+
+    assert_eq!(
+        pending,
+        ReplicationDecision::WaitingForReplicas {
+            pending_replicas: 1,
+            pending_records: 2,
+        }
+    );
+
+    cluster
+        .replicate_to("replica-1")
+        .expect("replicación válida");
+    let confirmed = cluster
+        .confirm_write(ReplicationAckMode::Sync)
+        .expect("confirmación válida");
+
+    assert_eq!(confirmed, ReplicationDecision::Confirmed);
+}
+
 fn account_update(before: &str, after: &str) -> LogOperation {
     LogOperation::update(
         PageId::new("heap/accounts/0001").expect("page id válido"),
@@ -141,4 +181,18 @@ fn account_update(before: &str, after: &str) -> LogOperation {
         PageImage::new(after).expect("imagen after válida"),
     )
     .expect("update válido")
+}
+
+fn cluster_with_lagged_replica() -> ReplicationCluster {
+    let mut primary = ReplicationNode::primary("primary-1").expect("primary válido");
+    let transaction_id = WalTransactionId::new(10);
+    primary
+        .append_local_update(transaction_id, account_update("saldo=100", "saldo=120"))
+        .expect("primary debe aceptar escritura");
+    primary
+        .append_local_commit(transaction_id)
+        .expect("commit local válido");
+    let replica = ReplicationNode::replica("replica-1").expect("réplica válida");
+
+    ReplicationCluster::new(primary, vec![replica]).expect("cluster válido")
 }
