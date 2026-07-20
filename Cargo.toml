@@ -26,6 +26,18 @@ name = "btree_split"
 path = "examples/soluciones/btree_split.rs"
 
 [[example]]
+name = "lsm_tree_flush"
+path = "examples/soluciones/lsm_tree_flush.rs"
+
+[[example]]
+name = "lsm_tree_precedence"
+path = "examples/soluciones/lsm_tree_precedence.rs"
+
+[[example]]
+name = "lsm_tree_compaction"
+path = "examples/soluciones/lsm_tree_compaction.rs"
+
+[[example]]
 name = "indexes_unique"
 path = "examples/soluciones/indexes_unique.rs"
 
@@ -80,6 +92,11 @@ path = "examples/soluciones/query_optimizer_cost_choice.rs"
 [[bench]]
 name = "btree_bench"
 path = "benches/btree_bench.rs"
+harness = false
+
+[[bench]]
+name = "lsm_tree_bench"
+path = "benches/lsm_tree_bench.rs"
 harness = false
 
 [[bench]]

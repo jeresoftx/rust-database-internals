@@ -1,11 +1,12 @@
 # LSM Tree
 
-> **Estado:** borrador técnico de representación y tradeoffs.
+> **Estado:** benchmarked.
 > **Alcance actual:** `MemTable`, `SSTable`, `SegmentId`,
 > `CompactionPlan`, escritura en memoria, flush, búsqueda por precedencia,
-> compaction educativa y comparación contra B-Tree.
+> compaction educativa, comparación contra B-Tree, ejemplos, ejercicios,
+> soluciones, diagrama Mermaid y benchmark manual.
 
-## Por Qué Existe
+## Por qué existe
 
 Una LSM Tree existe porque no todos los índices deben optimizar primero la
 lectura puntual. Hay cargas donde el costo dominante es escribir muchísimo, de
@@ -21,7 +22,7 @@ B-Tree enseña cómo mantener una estructura ordenada y balanceada mientras se
 inserta. LSM Tree enseña otra pregunta: qué pasa si primero escribimos rápido,
 dejamos evidencia inmutable y reparamos la forma del índice por lotes.
 
-## Modelo Actual Del Curso
+## Modelo actual del curso
 
 El modelo Rust actual representa una LSM Tree educativa con cuatro piezas:
 
@@ -45,27 +46,32 @@ No es todavía una LSM Tree de producción. Tombstones, niveles, bloom filters,
 índices por bloque, tamaños de página, archivos reales, WAL, concurrencia,
 políticas de compaction y recovery quedan para pasos posteriores.
 
-## Diagrama Mental
+## Diagrama mental
 
 ```mermaid
 flowchart LR
-    write["write(key, value)"] --> memtable["MemTable\nmutable, ordenada"]
-    memtable -->|"flush"| s1["SSTable 1\ninmutable"]
-    memtable -->|"flush"| s2["SSTable 2\ninmutable"]
-    memtable -->|"flush"| s3["SSTable 3\ninmutable"]
+    W["write(key, value)"]
+    M["MemTable<br/>mutable y ordenada"]
+    S1["SSTable 1<br/>inmutable"]
+    S2["SSTable 2<br/>inmutable"]
+    S3["SSTable 3<br/>compactada"]
+    Q["search(key)"]
+    C["CompactionPlan"]
 
-    search["search(key)"] --> memtable
-    search -->|"si no está en memoria"| newest["segmentos\nmás reciente a más antiguo"]
-    newest --> s3
-    newest --> s2
-    newest --> s1
-
-    s1 --> compaction["CompactionPlan"]
-    s2 --> compaction
-    compaction --> merged["SSTable nueva\nversiones visibles"]
+    W --> M
+    M -- "flush" --> S1
+    M -- "flush" --> S2
+    Q --> M
+    Q --> S2
+    Q --> S1
+    S1 --> C
+    S2 --> C
+    C --> S3
 ```
 
-## Costos Y Decisiones Frente A B-Tree
+Diagrama fuente: `diagrams/02-lsm-tree.mmd`.
+
+## Costos y decisiones frente a B-Tree
 
 | Decisión | B-Tree | LSM Tree |
 |----------|--------|----------|
@@ -81,7 +87,7 @@ flowchart LR
 La comparación no dice que una estructura sea "mejor" de forma absoluta. Dice
 qué costo decide pagar cada una y en qué momento.
 
-## Costo De Escritura
+## Costo de escritura
 
 En un B-Tree, insertar significa ubicar la hoja correcta, modificarla y partir
 nodos cuando se llenan. El beneficio es que la estructura queda lista para
@@ -96,7 +102,7 @@ El costo no desaparece. Se mueve. Más tarde, compaction tendrá que leer varios
 segmentos, fusionarlos y escribir un segmento nuevo. Ese trabajo de fondo es el
 precio de haber aceptado escrituras rápidas al inicio.
 
-## Costo De Lectura
+## Costo de lectura
 
 En un B-Tree, una búsqueda baja por niveles hasta una hoja. La altura crece
 lento porque cada nodo agrupa muchas claves. La lectura puntual suele tener una
@@ -111,7 +117,7 @@ eso las LSM Tree reales combinan compaction, bloom filters, índices por bloque 
 cachés. El modelo educativo empieza sin esas optimizaciones para que la
 precedencia sea visible.
 
-## Compaction Como Mantenimiento
+## Compaction como mantenimiento
 
 Compaction no es una limpieza cosmética. Es la operación que reduce deuda
 estructural:
@@ -126,7 +132,7 @@ En este repo, `CompactionPlan` es explícito porque el curso quiere enseñar que
 la compaction es una decisión del sistema, no un efecto mágico de escribir. El
 plan dice qué segmentos se leen y cuál será el segmento de salida.
 
-## Invariantes Del Modelo
+## Invariantes del modelo
 
 - Una `MemTable` necesita capacidad positiva.
 - Una escritura nueva consume una entrada de la `MemTable`.
@@ -143,7 +149,7 @@ plan dice qué segmentos se leen y cuál será el segmento de salida.
 Estas reglas están escritas para que el lector pueda comparar representación,
 operaciones y errores sin saltar todavía a archivos reales.
 
-## Cuándo Preferir Cada Modelo
+## Cuándo preferir cada modelo
 
 Un B-Tree suele ser una buena intuición inicial cuando:
 
@@ -163,7 +169,7 @@ Estas son intuiciones de diseño, no recetas. Un motor real mezcla muchas capas:
 WAL, buffer pool, compresión, concurrencia, recovery, estadísticas y decisiones
 de almacenamiento físico.
 
-## Relación Con El Resto Del Curso
+## Relación con el resto del curso
 
 LSM Tree conecta con capítulos posteriores:
 
@@ -180,3 +186,91 @@ LSM Tree conecta con capítulos posteriores:
 El propósito de este capítulo no es copiar RocksDB ni LevelDB. El propósito es
 construir una maqueta pequeña y honesta para entender por qué esos motores
 existen y qué problema decidieron pagar.
+
+## Ejemplos progresivos
+
+Los ejemplos del capítulo viven en `examples/` y se pueden ejecutar con
+`cargo run --example <nombre>`.
+
+| Ejemplo | Propósito |
+|---------|-----------|
+| `lsm_tree_basic` | Escribir en MemTable y leer una clave reciente. |
+| `lsm_tree_intermediate` | Mostrar precedencia de MemTable sobre SSTable. |
+| `lsm_tree_advanced` | Compactar segmentos y conservar versiones visibles. |
+
+## Ejercicios
+
+Los ejercicios están graduados para practicar una idea por vez. Las soluciones
+ejecutables viven en `examples/soluciones/`.
+
+### Nivel 1: Flush a SSTable
+
+Objetivo: observar cómo una MemTable ordenada se congela en un segmento
+inmutable.
+
+Tareas:
+
+- crear una `MemTable` con capacidad positiva;
+- escribir claves fuera de orden;
+- ejecutar `flush_to_sstable`;
+- confirmar que la MemTable queda vacía;
+- confirmar que la SSTable conserva entradas ordenadas.
+
+Solución: `cargo run --example lsm_tree_flush`.
+
+### Nivel 2: Precedencia de lectura
+
+Objetivo: comprobar que la versión más reciente gana durante una búsqueda.
+
+Tareas:
+
+- escribir una clave y hacer flush a `SSTable`;
+- escribir la misma clave otra vez en MemTable;
+- buscar la clave;
+- confirmar que el valor visible es el de MemTable.
+
+Solución: `cargo run --example lsm_tree_precedence`.
+
+### Nivel 3: Compaction
+
+Objetivo: fusionar segmentos y conservar la versión visible más reciente.
+
+Tareas:
+
+- crear dos segmentos con una clave repetida;
+- crear un `CompactionPlan`;
+- ejecutar `compact`;
+- confirmar que queda un segmento nuevo;
+- confirmar que la clave repetida conserva el valor más reciente.
+
+Solución: `cargo run --example lsm_tree_compaction`.
+
+## Benchmark manual
+
+El benchmark del capítulo mide escritura en MemTable, búsqueda con segmentos,
+flush y compaction:
+
+```bash
+cargo bench --bench lsm_tree_bench
+```
+
+La medición no pretende evaluar RocksDB, LevelDB ni un motor de producción.
+Sirve para conectar operaciones del modelo educativo con tiempos observables y
+comparables dentro del mismo crate.
+
+## Lo que aún no hace
+
+Este capítulo todavía no decide:
+
+- tombstones para borrado;
+- niveles y políticas de compaction;
+- bloom filters;
+- índices por bloque;
+- archivos reales en disco;
+- integración con WAL, recovery, MVCC o concurrencia.
+
+## Siguiente paso natural
+
+El siguiente paso natural del repo es corregir la marca pendiente de Índices en
+el checklist general o crear el siguiente issue de trazabilidad que mantenga el
+tablero de GitHub alineado con el estado real del curso.
