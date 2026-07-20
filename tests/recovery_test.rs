@@ -1,6 +1,6 @@
 use rust_database_internals::{
     recovery::RecoveryPlan,
-    wal::{LogOperation, PageId, PageImage, WalTransactionId, WriteAheadLog},
+    wal::{LogOperation, PageId, PageImage, PageStore, WalTransactionId, WriteAheadLog},
 };
 
 #[test]
@@ -74,11 +74,83 @@ fn rolled_back_transaction_is_not_redone_or_undone_again() {
     assert!(!plan.requires_undo(transaction_id));
 }
 
+#[test]
+fn replay_redoes_updates_from_committed_transactions() {
+    let mut log = WriteAheadLog::new();
+    let transaction_id = WalTransactionId::new(10);
+    let page_id = account_page();
+    let before = page_image("saldo=100");
+    let after = page_image("saldo=120");
+
+    log.append_begin(transaction_id);
+    log.append(transaction_id, account_update("saldo=100", "saldo=120"));
+    log.append_commit(transaction_id);
+
+    let mut store = PageStore::new();
+    store.write(page_id.clone(), before);
+    let plan = RecoveryPlan::from_wal(&log);
+
+    let report = plan.replay(&log, &mut store).expect("replay válido");
+
+    assert_eq!(store.read(&page_id), Some(&after));
+    assert_eq!(report.redone_records(), 1);
+    assert_eq!(report.undone_records(), 0);
+}
+
+#[test]
+fn replay_undoes_updates_from_uncommitted_transactions() {
+    let mut log = WriteAheadLog::new();
+    let transaction_id = WalTransactionId::new(20);
+    let page_id = account_page();
+    let before = page_image("saldo=100");
+    let after = page_image("saldo=130");
+
+    log.append_begin(transaction_id);
+    log.append(transaction_id, account_update("saldo=100", "saldo=130"));
+
+    let mut store = PageStore::new();
+    store.write(page_id.clone(), after);
+    let plan = RecoveryPlan::from_wal(&log);
+
+    let report = plan.replay(&log, &mut store).expect("replay válido");
+
+    assert_eq!(store.read(&page_id), Some(&before));
+    assert_eq!(report.redone_records(), 0);
+    assert_eq!(report.undone_records(), 1);
+}
+
+#[test]
+fn replay_undoes_uncommitted_updates_in_reverse_wal_order() {
+    let mut log = WriteAheadLog::new();
+    let transaction_id = WalTransactionId::new(30);
+    let page_id = account_page();
+    let original = page_image("saldo=100");
+    let final_dirty = page_image("saldo=140");
+
+    log.append_begin(transaction_id);
+    log.append(transaction_id, account_update("saldo=100", "saldo=120"));
+    log.append(transaction_id, account_update("saldo=120", "saldo=140"));
+
+    let mut store = PageStore::new();
+    store.write(page_id.clone(), final_dirty);
+    let plan = RecoveryPlan::from_wal(&log);
+
+    let report = plan.replay(&log, &mut store).expect("replay válido");
+
+    assert_eq!(store.read(&page_id), Some(&original));
+    assert_eq!(report.redone_records(), 0);
+    assert_eq!(report.undone_records(), 2);
+}
+
 fn account_update(before: &str, after: &str) -> LogOperation {
-    LogOperation::update(
-        PageId::new("heap/accounts/0001").expect("page id válido"),
-        PageImage::new(before).expect("imagen before válida"),
-        PageImage::new(after).expect("imagen after válida"),
-    )
-    .expect("update válido")
+    LogOperation::update(account_page(), page_image(before), page_image(after))
+        .expect("update válido")
+}
+
+fn account_page() -> PageId {
+    PageId::new("heap/accounts/0001").expect("page id válido")
+}
+
+fn page_image(value: &str) -> PageImage {
+    PageImage::new(value).expect("imagen válida")
 }

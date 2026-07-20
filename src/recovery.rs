@@ -1,12 +1,12 @@
 //! Modelo educativo de recovery después de una caída.
 //!
-//! Este módulo inicia recovery en el punto más pequeño posible: observar el WAL
-//! y decidir qué transacciones necesitan redo o undo después de un crash.
-//! Todavía no reproduce el log sobre páginas; ese paso pertenece al replay.
+//! Este módulo observa el WAL, decide qué transacciones necesitan redo o undo
+//! después de un crash y reproduce ese plan sobre un almacén educativo de
+//! páginas.
 
 use std::collections::BTreeSet;
 
-use crate::wal::{LogOperation, WalTransactionId, WriteAheadLog};
+use crate::wal::{LogOperation, PageStore, WalError, WalTransactionId, WriteAheadLog};
 
 /// Plan de recovery derivado de los registros WAL disponibles al reiniciar.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -70,5 +70,49 @@ impl RecoveryPlan {
     /// Devuelve `true` si la transacción aparece como candidata a undo.
     pub fn requires_undo(&self, transaction_id: WalTransactionId) -> bool {
         self.undo_transactions.contains(&transaction_id)
+    }
+
+    /// Reproduce el WAL sobre un almacén de páginas educativo.
+    pub fn replay(
+        &self,
+        log: &WriteAheadLog,
+        store: &mut PageStore,
+    ) -> Result<RecoveryReport, WalError> {
+        let mut report = RecoveryReport::default();
+
+        for record in log.iter() {
+            if record.is_redoable() && self.requires_redo(record.transaction_id()) {
+                store.redo(record)?;
+                report.redone_records += 1;
+            }
+        }
+
+        for record in log.records().iter().rev() {
+            if record.is_undoable() && self.requires_undo(record.transaction_id()) {
+                store.undo(record)?;
+                report.undone_records += 1;
+            }
+        }
+
+        Ok(report)
+    }
+}
+
+/// Resultado observable de reproducir un plan de recovery.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct RecoveryReport {
+    redone_records: usize,
+    undone_records: usize,
+}
+
+impl RecoveryReport {
+    /// Cantidad de registros aplicados con redo.
+    pub const fn redone_records(self) -> usize {
+        self.redone_records
+    }
+
+    /// Cantidad de registros aplicados con undo.
+    pub const fn undone_records(self) -> usize {
+        self.undone_records
     }
 }

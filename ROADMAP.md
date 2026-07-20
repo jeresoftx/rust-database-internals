@@ -56,8 +56,9 @@ ejemplos y documentación, pero todavía no se marca como `reviewed` ni
 Recovery ya cuenta con un primer plan educativo para interpretar el WAL después
 de una caída: transacciones con cambios y `Commit` se clasifican para redo, y
 transacciones con cambios sin `Commit` ni `Rollback` se clasifican para undo.
-Su estado visible es `draft`: el análisis inicial existe, pero todavía faltan
-replay del WAL y checkpoints.
+También incluye replay educativo sobre `PageStore`, con redo en orden de WAL y
+undo en orden inverso. Su estado visible es `draft`: el análisis y replay
+inicial existen, pero todavía faltan checkpoints.
 
 El checklist detallado vive en
 [`docs/superpowers/plans/2026-07-18-rust-database-internals-course.md`](docs/superpowers/plans/2026-07-18-rust-database-internals-course.md).

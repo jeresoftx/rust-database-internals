@@ -206,7 +206,7 @@ soluciones y benchmark educativo completos. No se marca como `reviewed` ni
 ## Task 8: Recovery
 
 - [x] Modelar crash antes y después de commit.
-- [ ] Modelar replay del WAL.
+- [x] Modelar replay del WAL.
 - [ ] Documentar checkpoints.
 
 ## Task 9: Replicación
