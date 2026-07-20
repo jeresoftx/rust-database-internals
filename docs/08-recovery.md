@@ -1,10 +1,10 @@
 # Recovery
 
-> **Estado:** draft.
+> **Estado:** tested.
 > **Alcance actual:** plan educativo de recovery para distinguir transacciones
 > confirmadas que requieren redo y transacciones con cambios no confirmados que
 > requieren undo después de una caída. Incluye replay educativo del WAL sobre
-> `PageStore`. Todavía no modela checkpoints.
+> `PageStore` y documentación conceptual de checkpoints.
 
 ## Por qué existe
 
@@ -68,6 +68,10 @@ Una transacción abierta sin cambios no necesita undo. Una transacción con
 - recorre el WAL hacia atrás para undo de transacciones no confirmadas;
 - devuelve un reporte con conteos de registros aplicados.
 
+Los checkpoints se documentan como frontera conceptual: no cambian qué significa
+redo o undo, pero sí cambian desde dónde conviene empezar a leer el WAL durante
+recovery.
+
 ## Invariantes
 
 - una transacción con `Update` y sin `Commit` requiere undo;
@@ -77,7 +81,9 @@ Una transacción abierta sin cambios no necesita undo. Una transacción con
 - el plan mantiene un orden estable por identificador de transacción;
 - redo se aplica en orden de WAL;
 - undo se aplica en orden inverso de WAL;
-- replay solo modifica páginas mediante `PageStore::redo` y `PageStore::undo`.
+- replay solo modifica páginas mediante `PageStore::redo` y `PageStore::undo`;
+- un checkpoint no reemplaza al WAL: solo resume un punto útil para acotar la
+  recuperación.
 
 ## Diagrama
 
@@ -93,9 +99,11 @@ flowchart TD
     UNDO["plan: undo"]
     RF["replay forward"]
     UB["undo backward"]
+    CP["checkpoint<br/>punto de partida"]
 
     S --> W
-    W --> U
+    W --> CP
+    CP --> U
     U -- "no" --> N
     U -- "sí" --> R
     R -- "sí" --> N
@@ -192,15 +200,79 @@ LSN 3 restaura saldo=120
 LSN 2 restaura saldo=100
 ```
 
+## Checkpoints
+
+Sin checkpoints, un motor ingenuo tendría que leer el WAL desde el primer
+registro histórico cada vez que reinicia. Eso funciona en un ejemplo de veinte
+líneas, pero no en una base de datos que lleva semanas escribiendo.
+
+Un checkpoint existe para responder:
+
+```text
+¿desde qué punto reciente puedo empezar recovery sin olvidar trabajo necesario?
+```
+
+La idea no es borrar el WAL de forma imprudente. La idea es registrar un punto
+de referencia que dice: hasta aquí el motor conoce cierto estado estable, y a
+partir de aquí debe analizar lo que pudo quedar pendiente.
+
+Un checkpoint educativo puede resumir:
+
+- el último LSN considerado estable;
+- transacciones activas al momento del checkpoint;
+- páginas sucias que todavía podrían necesitar escribirse;
+- el LSN más antiguo que recovery no debe olvidar.
+
+```text
+LSN 10 checkpoint
+  active tx: tx20
+  dirty pages:
+    heap/accounts/0001 desde LSN 7
+    heap/payments/0004 desde LSN 9
+
+recovery no empieza en LSN 1;
+empieza en el punto más antiguo que el checkpoint todavía necesita explicar.
+```
+
+El checkpoint permite leer menos historia, pero no elimina las preguntas de
+recovery:
+
+- ¿qué transacciones confirmadas necesitan redo?
+- ¿qué transacciones no confirmadas necesitan undo?
+- ¿qué páginas pudieron quedar atrasadas respecto al WAL?
+
+### Checkpoint nítido y checkpoint difuso
+
+Un checkpoint nítido pausa el mundo, fuerza páginas y escribe un punto limpio.
+Es fácil de razonar, pero caro: detener todo para crear orden perfecto suele
+lastimar disponibilidad y latencia.
+
+Un checkpoint difuso permite que el sistema siga trabajando mientras registra
+un resumen suficientemente útil. Es más realista, pero obliga a guardar más
+metadatos: páginas sucias, transacciones activas y LSNs de inicio relevantes.
+
+```text
+checkpoint nítido:
+pausar escrituras -> forzar páginas -> escribir checkpoint -> continuar
+
+checkpoint difuso:
+marcar inicio -> seguir trabajando -> registrar páginas/tx activas -> cerrar
+checkpoint
+```
+
+Este curso no implementa todavía una estructura `Checkpoint`. Lo importante en
+este capítulo es fijar el contrato mental: checkpoint no significa "ya no hay
+recovery"; significa "recovery puede empezar desde un punto más inteligente".
+
 ## Lo que aún no hace
 
-Este borrador todavía no decide:
+Este capítulo todavía no decide:
 
 - cómo separar análisis, redo y undo;
-- cómo usar checkpoints para no leer toda la historia desde el inicio;
+- cómo implementar una estructura ejecutable de checkpoints;
 - cómo distinguir durabilidad física mediante disco, `fsync` o buffer pool.
 
 ## Siguiente paso natural
 
-El siguiente paso del capítulo es documentar checkpoints: por qué existen y
-cómo evitan leer toda la historia del WAL desde el inicio.
+El siguiente capítulo natural es Replicación: modelar primary/replica, lag y
+confirmación síncrona o asíncrona.

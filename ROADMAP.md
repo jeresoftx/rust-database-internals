@@ -57,8 +57,10 @@ Recovery ya cuenta con un primer plan educativo para interpretar el WAL después
 de una caída: transacciones con cambios y `Commit` se clasifican para redo, y
 transacciones con cambios sin `Commit` ni `Rollback` se clasifican para undo.
 También incluye replay educativo sobre `PageStore`, con redo en orden de WAL y
-undo en orden inverso. Su estado visible es `draft`: el análisis y replay
-inicial existen, pero todavía faltan checkpoints.
+undo en orden inverso. El capítulo documenta checkpoints como puntos de partida
+para acotar la lectura del WAL durante recovery. Su estado visible es `tested`:
+el bloque tiene modelo, pruebas, ejemplos y documentación, pero todavía no se
+marca como `reviewed` ni `published`.
 
 El checklist detallado vive en
 [`docs/superpowers/plans/2026-07-18-rust-database-internals-course.md`](docs/superpowers/plans/2026-07-18-rust-database-internals-course.md).
@@ -74,7 +76,7 @@ El checklist detallado vive en
 | 05 | ACID | benchmarked |
 | 06 | MVCC | tested |
 | 07 | Write-Ahead Log | tested |
-| 08 | Recovery | draft |
+| 08 | Recovery | tested |
 | 09 | Replicación | planned |
 | 10 | Query Optimizer | planned |
 
